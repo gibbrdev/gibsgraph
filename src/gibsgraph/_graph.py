@@ -101,7 +101,7 @@ class Graph:
 
         from gibsgraph import Graph
 
-        g = Graph("bolt://localhost:7687", password="secret")
+        g = Graph("bolt://localhost:7687", password="your-password")
         print(g.ask("What regulations apply to EU fintechs?"))
 
     Everything — Neo4j connection, LLM selection, retrieval, Cypher
@@ -255,6 +255,17 @@ class Graph:
         from gibsgraph.tools.visualizer import GraphVisualizer
 
         return GraphVisualizer(settings=self._settings).to_mermaid(subgraph)
+
+    def close(self) -> None:
+        """Close Neo4j connections and release resources."""
+        if self._agent is not None:
+            self._agent.close()
+
+    def __enter__(self) -> Graph:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
 
     def __repr__(self) -> str:
         return (

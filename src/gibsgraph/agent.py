@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
@@ -17,6 +17,26 @@ from gibsgraph.tools.cypher_validator import CypherValidator
 from gibsgraph.tools.visualizer import GraphVisualizer
 
 log = structlog.get_logger(__name__)
+
+
+def _make_llm(settings: Settings) -> BaseChatModel:
+    """Create the appropriate LLM client based on the configured model."""
+    model = settings.llm_model
+    if model.startswith("claude"):
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(
+            model=model,  # type: ignore[call-arg]
+            temperature=settings.llm_temperature,
+            max_retries=settings.llm_max_retries,
+        )
+    from langchain_openai import ChatOpenAI
+
+    return ChatOpenAI(
+        model=model,
+        temperature=settings.llm_temperature,
+        max_retries=settings.llm_max_retries,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -45,35 +65,11 @@ class AgentState(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def classify_usecase(state: AgentState, *, settings: Settings) -> dict[str, Any]:
-    """Classify the query into a usecase category via LLM."""
-    log.info("classify_usecase", query=state.query[:80])
-
-    llm = ChatOpenAI(
-        model=settings.llm_model,
-        temperature=0.0,
-        max_retries=settings.llm_max_retries,
-    )
-
-    response = llm.invoke(
-        "Classify this question into exactly one category. "
-        "Reply with ONLY the category name, nothing else.\n\n"
-        "Categories:\n"
-        "- graph_structure (about nodes, relationships, schema, counts)\n"
-        "- cross_reference (comparing or linking across entities)\n"
-        "- compliance (regulatory requirements, obligations, rules)\n"
-        "- general (anything else)\n\n"
-        f"Question: {state.query}"
-    )
-    usecase = str(response.content).strip().lower().replace(" ", "_")
-    log.info("classify_usecase.result", usecase=usecase)
-    return {"usecase": usecase, "steps": state.steps + 1}
-
-
-def retrieve_subgraph(state: AgentState, *, settings: Settings) -> dict[str, Any]:
+def retrieve_subgraph(
+    state: AgentState, *, settings: Settings, retriever: GraphRetriever
+) -> dict[str, Any]:
     """Run retrieval and return the subgraph + context."""
-    log.info("retrieve_subgraph", usecase=state.usecase)
-    retriever = GraphRetriever(settings=settings)
+    log.info("retrieve_subgraph")
     try:
         result = retriever.retrieve(query=state.query)
         return {
@@ -85,8 +81,6 @@ def retrieve_subgraph(state: AgentState, *, settings: Settings) -> dict[str, Any
     except Exception as exc:
         log.error("retrieve_subgraph_failed", error=str(exc))
         return {"errors": [*state.errors, str(exc)], "steps": state.steps + 1}
-    finally:
-        retriever.close()
 
 
 def generate_explanation(state: AgentState, *, settings: Settings) -> dict[str, Any]:
@@ -99,11 +93,7 @@ def generate_explanation(state: AgentState, *, settings: Settings) -> dict[str, 
             "steps": state.steps + 1,
         }
 
-    llm = ChatOpenAI(
-        model=settings.llm_model,
-        temperature=0.0,
-        max_retries=settings.llm_max_retries,
-    )
+    llm = _make_llm(settings)
 
     response = llm.invoke(
         "You are a knowledge graph analyst. Answer the user's question based "
@@ -156,15 +146,15 @@ def should_continue(state: AgentState, max_steps: int = 10) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_graph(settings: Settings | None = None) -> CompiledStateGraph:  # type: ignore[type-arg]
+def build_graph(
+    settings: Settings | None = None, *, retriever: GraphRetriever | None = None
+) -> CompiledStateGraph:  # type: ignore[type-arg]
     """Compile and return the LangGraph agent."""
     settings = settings or get_settings()
-
-    def _classify(state: AgentState) -> dict[str, Any]:
-        return classify_usecase(state, settings=settings)
+    _retriever = retriever or GraphRetriever(settings=settings)
 
     def _retrieve(state: AgentState) -> dict[str, Any]:
-        return retrieve_subgraph(state, settings=settings)
+        return retrieve_subgraph(state, settings=settings, retriever=_retriever)
 
     def _explain(state: AgentState) -> dict[str, Any]:
         return generate_explanation(state, settings=settings)
@@ -173,14 +163,12 @@ def build_graph(settings: Settings | None = None) -> CompiledStateGraph:  # type
         return visualize(state, settings=settings)
 
     graph = StateGraph(AgentState)
-    graph.add_node("classify", _classify)
     graph.add_node("retrieve", _retrieve)
     graph.add_node("explain", _explain)
     graph.add_node("validate", validate_output)
     graph.add_node("visualize", _visualize)
 
-    graph.add_edge(START, "classify")
-    graph.add_edge("classify", "retrieve")
+    graph.add_edge(START, "retrieve")
     graph.add_edge("retrieve", "explain")
     graph.add_edge("explain", "validate")
     graph.add_conditional_edges(
@@ -203,7 +191,8 @@ class GibsGraphAgent:
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
-        self._graph = build_graph(self.settings)
+        self._retriever = GraphRetriever(settings=self.settings)
+        self._graph = build_graph(self.settings, retriever=self._retriever)
         self.kg_builder = KGBuilder(settings=self.settings)
 
     @classmethod
@@ -223,3 +212,8 @@ class GibsGraphAgent:
         initial = AgentState(query=query)
         result = await self._graph.ainvoke(initial)
         return AgentState(**result)
+
+    def close(self) -> None:
+        """Close Neo4j connections."""
+        self._retriever.close()
+        self.kg_builder.close()

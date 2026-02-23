@@ -8,15 +8,22 @@ import structlog
 
 log = structlog.get_logger(__name__)
 
-# Patterns that should NEVER appear in parameterized Cypher
+# Patterns that should NEVER appear in LLM-generated read-only Cypher.
+# Defence-in-depth: combine this allowlist with session.execute_read().
 _INJECTION_PATTERNS = [
-    r";\s*DROP",
-    r";\s*DELETE",
-    r";\s*DETACH",
+    r"\bCREATE\b",
+    r"\bMERGE\b",
+    r"\bSET\b",
+    r"\bDELETE\b",
+    r"\bDETACH\b",
+    r"\bDROP\b",
+    r"\bREMOVE\b",
+    r"\bFOREACH\b",
     r"CALL\s+\{",  # subquery injection vector
     r"LOAD\s+CSV",  # file system access
     r"apoc\.export",  # APOC export procedures
     r"apoc\.load",  # APOC load procedures
+    r"dbms\.",  # admin procedures
 ]
 
 _COMPILED_PATTERNS = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]

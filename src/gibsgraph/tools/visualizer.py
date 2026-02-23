@@ -30,7 +30,7 @@ class GraphVisualizer:
         for node in nodes:
             node_id = str(node.get("id", node.get("name", "unknown")))
             safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
-            label = node.get("name", node_id)[:30]
+            label = str(node.get("name", node_id))[:30].replace('"', "'")
             lines.append(f'    {safe_id}["{label}"]')
             seen_nodes.add(safe_id)
 
@@ -45,12 +45,13 @@ class GraphVisualizer:
 
     def bloom_url(self, subgraph: dict[str, Any]) -> str:
         """Generate a Neo4j Bloom deep-link URL for the subgraph."""
-        # Extract node IDs for Bloom perspective query
         node_ids = [str(n.get("id", "")) for n in subgraph.get("nodes", []) if n.get("id")]
         if not node_ids:
             return ""
 
-        cypher = f"MATCH (n) WHERE elementId(n) IN {node_ids!r} RETURN n"
+        # Build Cypher-safe list with double quotes (not Python repr single quotes)
+        id_list = "[" + ", ".join(f'"{nid}"' for nid in node_ids) + "]"
+        cypher = f"MATCH (n) WHERE elementId(n) IN {id_list} RETURN n"
         encoded = urllib.parse.quote(cypher)
         base = "https://bloom.neo4j.io/index.html"
         url = f"{base}#search={encoded}"
@@ -67,8 +68,11 @@ class GraphVisualizer:
 
         net = Network(height="600px", width="100%", bgcolor="#222222", font_color="white")
         for node in subgraph.get("nodes", []):
-            label = str(node.get("name", node.get("id", "?")))[:40]
-            net.add_node(label, label=label)
+            node_id = str(node.get("_id", node.get("id", node.get("name", "?"))))
+            label = str(node.get("name", node_id))[:40]
+            net.add_node(node_id, label=label)
         for edge in subgraph.get("edges", []):
-            net.add_edge(str(edge["start"]), str(edge["end"]), label=edge.get("type", ""))
+            net.add_edge(
+                str(edge.get("start", "")), str(edge.get("end", "")), label=edge.get("type", "")
+            )
         return str(net.generate_html())

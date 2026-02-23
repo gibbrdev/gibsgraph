@@ -47,13 +47,11 @@ class KGBuilder:
             msg = "KGBuilder.ingest() is disabled in read-only mode (NEO4J_READ_ONLY=true)"
             raise RuntimeError(msg)
 
-        # In production: call neo4j-graphrag SimpleKGPipeline
-        # pipeline = SimpleKGPipeline(driver=self._driver, llm=..., embedder=...)
-        # result = pipeline.run(text=text)
-
-        # Stub for now — returns mock result
-        log.info("kg_builder.ingest.complete", nodes=0, rels=0, chunks=1)
-        return IngestResult(nodes_created=0, relationships_created=0, chunks_processed=1)
+        # TODO: wire neo4j-graphrag SimpleKGPipeline
+        raise NotImplementedError(
+            "KGBuilder.ingest() is not yet implemented. "
+            "Text-to-graph ingestion is planned for a future release."
+        )
 
     def ingest_file(self, path: str) -> IngestResult:
         """Ingest a text file by path."""

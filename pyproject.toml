@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gibsgraph"
-version = "0.1.0"
+version = "0.1.1"
 description = "GraphRAG + LangGraph agent for intelligent knowledge graph reasoning over Neo4j"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
-authors = [{ name = "vibecoder", email = "you@gibs.dev" }]
+authors = [{ name = "Victor Gibson", email = "victor@gibs.dev" }]
 keywords = ["neo4j", "graphrag", "langgraph", "knowledge-graph", "llm", "gnn"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -26,6 +26,7 @@ dependencies = [
     "langchain-anthropic>=0.2.0",
     "neo4j-graphrag[all]>=1.0.0",
     "pydantic>=2.10",
+    "pydantic-settings>=2.6.0",
     "structlog>=24.4.0",
     "python-dotenv>=1.0.0",
     "httpx>=0.27.0",
@@ -34,11 +35,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Human-readable extras — named after what you want to DO, not the stack
-llm = [
-    "langchain-openai>=0.2.0",
-    "langchain-anthropic>=0.2.0",
-]
 gnn = [
     "torch>=2.4.0",
     "torch-geometric>=2.6.0",
@@ -59,16 +55,15 @@ dev = [
     "mypy>=1.13.0",
     "pre-commit>=4.0.0",
     "bandit>=1.8.0",
-    "pydantic-settings>=2.6.0",
 ]
-full = ["gibsgraph[llm,gnn,ui,dev]"]
+full = ["gibsgraph[gnn,ui,dev]"]
 
 [project.urls]
-Homepage = "https://github.com/vibecoder/gibsgraph"
+Homepage = "https://github.com/buildsyncinc/gibsgraph"
 Documentation = "https://vibecoder.github.io/gibsgraph"
-Repository = "https://github.com/vibecoder/gibsgraph"
-"Bug Tracker" = "https://github.com/vibecoder/gibsgraph/issues"
-Changelog = "https://github.com/vibecoder/gibsgraph/blob/main/CHANGELOG.md"
+Repository = "https://github.com/buildsyncinc/gibsgraph"
+"Bug Tracker" = "https://github.com/buildsyncinc/gibsgraph/issues"
+Changelog = "https://github.com/buildsyncinc/gibsgraph/blob/main/CHANGELOG.md"
 
 [project.scripts]
 gibsgraph = "gibsgraph.cli:main"

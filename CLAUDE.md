@@ -11,10 +11,8 @@ GibsGraph lets anyone ask complex questions against a Neo4j graph in plain
 language — and get answers they can trust, with source citations, without
 knowing Cypher.
 
-**The full vision (see ROADMAP_INTERNAL.md):**
+**The full vision:**
 Natural language → GibsGraph → professional Neo4j graph, automatically.
-The system learns from every graph built in production. The more it's used,
-the better it gets. The vallgrav (moat) grows every day.
 
 ## Architecture — four layers
 
@@ -41,8 +39,6 @@ GNN retrained periodically
 Focus: `g.ask()` works against a real Neo4j graph. PCST implemented (not stub).
 Demo runs against gibs.dev regulatory graph. `pip install gibsgraph` works.
 
-See ROADMAP_INTERNAL.md for full version strategy.
-
 ## Project overview
 
 GibsGraph is a **GraphRAG + LangGraph agent** for Neo4j knowledge graph reasoning.
@@ -62,7 +58,7 @@ detail — never expose them in user-facing docs or examples.
 
 ```python
 # Correct — what users write
-g = Graph("bolt://localhost:7687", password="secret")
+g = Graph("bolt://localhost:7687", password="your-password")
 result = g.ask("Who acquired Beats?")
 g.ingest("Apple acquired Beats for $3B", read_only=False)
 
@@ -131,13 +127,8 @@ docker compose up
 - [ ] No `.env` or secrets in diff
 - [ ] CHANGELOG.md updated
 
-## Where stubs need real implementation
+## Roadmap stubs
 
-Search for `# In production:` comments — these mark where stub code needs
-real LLM/embedding/model calls wired in.
-
-Key stubs:
-- `retrieval/retriever.py` → `_embed()`, `_pcst_prune()`  
-- `kg_builder/builder.py` → `ingest()` (wire neo4j-graphrag SimpleKGPipeline)
-- `agent.py` → `classify_usecase()`, `generate_explanation()` (wire LLM calls)
-- `gnn/g_retriever.py` → `predict()` (load real model weights)
+Some features are planned but not yet implemented. These raise `NotImplementedError`:
+- `kg_builder/builder.py` → `ingest()` (pending neo4j-graphrag SimpleKGPipeline)
+- `gnn/g_retriever.py` → `predict()` (pending model weights)

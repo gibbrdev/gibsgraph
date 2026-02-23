@@ -353,13 +353,9 @@ class GraphRetriever:
         previous_cypher: str = "",
     ) -> str:
         """Use LLM to generate read-only Cypher from a natural language query."""
-        from langchain_openai import ChatOpenAI
+        from gibsgraph.agent import _make_llm
 
-        llm = ChatOpenAI(
-            model=self.settings.llm_model,
-            temperature=0.0,
-            max_retries=self.settings.llm_max_retries,
-        )
+        llm = _make_llm(self.settings)
 
         prompt = f"{self._CYPHER_SYSTEM_PROMPT}\n{schema.to_prompt()}\n\n"
 
@@ -397,7 +393,7 @@ class GraphRetriever:
 
         try:
             with self._driver.session(database=self.settings.neo4j_database) as session:
-                records = list(session.run(cypher))
+                records = list(session.execute_read(lambda tx: list(tx.run(cypher))))
 
             # Convert records to a structured result
             nodes: list[dict[str, Any]] = []

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gibsgraph.agent import AgentState, classify_usecase, generate_explanation
+from gibsgraph.agent import AgentState, generate_explanation
 from gibsgraph.config import Settings
 
 
@@ -25,31 +25,19 @@ def test_agent_state_defaults():
     assert state.requires_human_review is False
 
 
-@patch("gibsgraph.agent.ChatOpenAI")
-def test_classify_usecase_increments_steps(mock_llm_cls, settings):
-    mock_llm = MagicMock()
-    mock_llm.invoke.return_value = MagicMock(content="cross_reference")
-    mock_llm_cls.return_value = mock_llm
-
-    state = AgentState(query="What companies acquired Tesla?")
-    result = classify_usecase(state, settings=settings)
-    assert result["steps"] == 1
-    assert result["usecase"] == "cross_reference"
-
-
 def test_generate_explanation_no_context(settings):
     state = AgentState(query="test", retrieved_context="")
     result = generate_explanation(state, settings=settings)
     assert "No relevant information" in result["explanation"]
 
 
-@patch("gibsgraph.agent.ChatOpenAI")
-def test_generate_explanation_with_context(mock_llm_cls, settings):
+@patch("gibsgraph.agent._make_llm")
+def test_generate_explanation_with_context(mock_make_llm, settings):
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = MagicMock(
         content="Apple acquired Beats Electronics for $3 billion in 2014."
     )
-    mock_llm_cls.return_value = mock_llm
+    mock_make_llm.return_value = mock_llm
 
     state = AgentState(query="test", retrieved_context="Apple acquired Beats for $3B")
     result = generate_explanation(state, settings=settings)
