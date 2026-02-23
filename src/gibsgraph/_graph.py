@@ -60,6 +60,7 @@ class IngestResult:
 # LLM auto-detection
 # ---------------------------------------------------------------------------
 
+
 def _resolve_llm(llm: str) -> str:
     """Detect best available LLM from environment if llm='auto'."""
     from gibsgraph.config import PROVIDERS
