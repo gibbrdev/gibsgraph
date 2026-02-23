@@ -2,7 +2,7 @@
 
 import pytest
 
-from gibsgraph.tools.cypher_validator import CypherValidator, CypherValidationError
+from gibsgraph.tools.cypher_validator import CypherValidationError, CypherValidator
 
 
 @pytest.fixture

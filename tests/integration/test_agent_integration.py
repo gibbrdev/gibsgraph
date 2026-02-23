@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gibsgraph.agent import GibsGraphAgent, AgentState
+from gibsgraph.agent import AgentState, GibsGraphAgent
 from gibsgraph.config import Settings
 
 
@@ -20,8 +20,10 @@ def mock_settings() -> Settings:
 @pytest.fixture
 def mock_neo4j():
     """Patch GraphDatabase.driver to avoid real Neo4j connection."""
-    with patch("gibsgraph.kg_builder.builder.GraphDatabase.driver") as mock_driver, \
-         patch("gibsgraph.retrieval.retriever.GraphDatabase.driver") as mock_ret_driver:
+    with (
+        patch("gibsgraph.kg_builder.builder.GraphDatabase.driver") as mock_driver,
+        patch("gibsgraph.retrieval.retriever.GraphDatabase.driver") as mock_ret_driver,
+    ):
         mock_session = MagicMock()
         mock_session.__enter__ = MagicMock(return_value=mock_session)
         mock_session.__exit__ = MagicMock(return_value=False)
@@ -34,8 +36,10 @@ def mock_neo4j():
 @pytest.fixture
 def mock_llm():
     """Patch ChatOpenAI to avoid real LLM calls."""
-    with patch("gibsgraph.agent.ChatOpenAI") as mock_cls, \
-         patch("langchain_openai.ChatOpenAI") as mock_langchain_cls:
+    with (
+        patch("gibsgraph.agent.ChatOpenAI") as mock_cls,
+        patch("langchain_openai.ChatOpenAI") as mock_langchain_cls,
+    ):
         mock_instance = MagicMock()
         mock_instance.invoke.return_value = MagicMock(content="general")
         mock_cls.return_value = mock_instance

@@ -9,6 +9,7 @@ Strategy:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import structlog
 from neo4j import GraphDatabase
@@ -52,7 +53,7 @@ class GraphSchema:
 class RetrievalResult:
     """Result from the graph retriever."""
 
-    subgraph: dict = field(default_factory=dict)
+    subgraph: dict[str, Any] = field(default_factory=dict)
     context: str = ""
     cypher: str = ""
     nodes_count: int = 0
@@ -102,29 +103,29 @@ class GraphRetriever:
         log.info("retriever.discovering_schema")
         with self._driver.session(database=self.settings.neo4j_database) as session:
             # Labels
-            labels = [r["label"] for r in session.run(
-                "CALL db.labels() YIELD label RETURN label"
-            )]
+            labels = [r["label"] for r in session.run("CALL db.labels() YIELD label RETURN label")]
 
             # Relationship types
-            rel_types = [r["relationshipType"] for r in session.run(
-                "CALL db.relationshipTypes() YIELD relationshipType "
-                "RETURN relationshipType"
-            )]
+            rel_types = [
+                r["relationshipType"]
+                for r in session.run(
+                    "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType"
+                )
+            ]
 
             # Node count
-            node_count = session.run(
-                "MATCH (n) RETURN count(n) AS c"
-            ).single()["c"]
+            record = session.run("MATCH (n) RETURN count(n) AS c").single()
+            node_count: int = record["c"] if record else 0
 
             # Property keys per label (sample 5 nodes each)
             property_keys: dict[str, list[str]] = {}
             for label in labels:
-                records = list(session.run(
-                    "MATCH (n) WHERE $label IN labels(n) "
-                    "RETURN keys(n) AS k LIMIT 5",
-                    label=label,
-                ))
+                records = list(
+                    session.run(
+                        "MATCH (n) WHERE $label IN labels(n) RETURN keys(n) AS k LIMIT 5",
+                        label=label,
+                    )
+                )
                 all_keys: set[str] = set()
                 for r in records:
                     all_keys.update(r["k"])
@@ -134,11 +135,12 @@ class GraphRetriever:
             # Sample property values — so LLM knows data conventions
             sample_values: dict[str, dict[str, list[str]]] = {}
             for label in labels:
-                records = list(session.run(
-                    "MATCH (n) WHERE $label IN labels(n) "
-                    "RETURN properties(n) AS p LIMIT 5",
-                    label=label,
-                ))
+                records = list(
+                    session.run(
+                        "MATCH (n) WHERE $label IN labels(n) RETURN properties(n) AS p LIMIT 5",
+                        label=label,
+                    )
+                )
                 if not records:
                     continue
                 label_samples: dict[str, list[str]] = {}
@@ -150,18 +152,21 @@ class GraphRetriever:
                                 label_samples[k].append(v)
                 # Keep only properties with interesting distinct values (< 20)
                 sample_values[label] = {
-                    k: vs[:5] for k, vs in label_samples.items()
+                    k: vs[:5]
+                    for k, vs in label_samples.items()
                     if 1 < len(vs) <= 20 or k in ("name", "regulation", "title")
                 }
 
             # Relationship patterns — discover (source)-[:TYPE]->(target)
             rel_patterns: list[str] = []
-            pattern_records = list(session.run(
-                "MATCH (a)-[r]->(b) "
-                "RETURN DISTINCT labels(a)[0] AS from_l, type(r) AS rel, "
-                "labels(b)[0] AS to_l "
-                "LIMIT 50"
-            ))
+            pattern_records = list(
+                session.run(
+                    "MATCH (a)-[r]->(b) "
+                    "RETURN DISTINCT labels(a)[0] AS from_l, type(r) AS rel, "
+                    "labels(b)[0] AS to_l "
+                    "LIMIT 50"
+                )
+            )
             seen_patterns: set[str] = set()
             for r in pattern_records:
                 pat = f"(:{r['from_l']})-[:{r['rel']}]->(:{r['to_l']})"
@@ -174,9 +179,7 @@ class GraphRetriever:
             vector_index_name = ""
             indexes: list[dict[str, str]] = []
             try:
-                for r in session.run(
-                    "SHOW INDEXES YIELD name, type, labelsOrTypes, properties"
-                ):
+                for r in session.run("SHOW INDEXES YIELD name, type, labelsOrTypes, properties"):
                     idx = {
                         "name": r["name"],
                         "type": r["type"],
@@ -187,7 +190,7 @@ class GraphRetriever:
                     if r["type"] == "VECTOR":
                         has_vector = True
                         vector_index_name = r["name"]
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.debug("retriever.show_indexes_not_supported")
 
         self._schema = GraphSchema(
@@ -263,9 +266,7 @@ class GraphRetriever:
                 strategy="vector",
             )
 
-        subgraph = self._fetch_neighbourhood(
-            node_ids=candidate_ids, limit=neighbourhood_limit
-        )
+        subgraph = self._fetch_neighbourhood(node_ids=candidate_ids, limit=neighbourhood_limit)
         context = self._serialize_context(subgraph)
 
         return RetrievalResult(
@@ -281,9 +282,7 @@ class GraphRetriever:
     # Strategy 2: Text-to-Cypher via LLM
     # ------------------------------------------------------------------
 
-    def _retrieve_cypher(
-        self, query: str, *, schema: GraphSchema
-    ) -> RetrievalResult:
+    def _retrieve_cypher(self, query: str, *, schema: GraphSchema) -> RetrievalResult:
         """Generate Cypher from natural language using the graph schema."""
         log.info("retriever.strategy_cypher")
 
@@ -332,19 +331,17 @@ class GraphRetriever:
         )
 
         response = llm.invoke(prompt)
-        cypher = response.content.strip()
+        cypher = str(response.content).strip()
 
         # Strip markdown code fences if present
         if cypher.startswith("```"):
             lines = cypher.split("\n")
-            cypher = "\n".join(
-                l for l in lines if not l.startswith("```")
-            ).strip()
+            cypher = "\n".join(line for line in lines if not line.startswith("```")).strip()
 
         log.info("retriever.cypher_generated", cypher=cypher[:200])
         return cypher
 
-    def _execute_read_cypher(self, cypher: str) -> dict:
+    def _execute_read_cypher(self, cypher: str) -> dict[str, Any]:
         """Execute a read-only Cypher query and return results as subgraph dict."""
         from gibsgraph.tools.cypher_validator import CypherValidator
 
@@ -358,12 +355,12 @@ class GraphRetriever:
                 records = list(session.run(cypher))
 
             # Convert records to a structured result
-            nodes: list[dict] = []
-            edges: list[dict] = []
-            tabular: list[dict] = []
+            nodes: list[dict[str, Any]] = []
+            edges: list[dict[str, Any]] = []
+            tabular: list[dict[str, Any]] = []
 
             for record in records:
-                row = {}
+                row: dict[str, Any] = {}
                 for key in record.keys():
                     val = record[key]
                     # Neo4j Node
@@ -375,7 +372,7 @@ class GraphRetriever:
                         row[key] = node_dict
                     # Neo4j Relationship
                     elif hasattr(val, "type"):
-                        edge_dict = {
+                        edge_dict: dict[str, Any] = {
                             "type": val.type,
                             "start": val.start_node.element_id,
                             "end": val.end_node.element_id,
@@ -389,7 +386,7 @@ class GraphRetriever:
 
             return {"nodes": nodes, "edges": edges, "records": tabular}
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.error("retriever.cypher_execution_failed", error=str(exc))
             return {"nodes": [], "edges": [], "records": []}
 
@@ -426,11 +423,11 @@ class GraphRetriever:
                     min_score=min_score,
                 )
                 return [r["node"].element_id for r in records]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning("retriever.vector_search_failed", error=str(exc))
             return []
 
-    def _fetch_neighbourhood(self, *, node_ids: list[str], limit: int) -> dict:
+    def _fetch_neighbourhood(self, *, node_ids: list[str], limit: int) -> dict[str, Any]:
         """Fetch 1-hop neighbourhood for given node IDs."""
         with self._driver.session(database=self.settings.neo4j_database) as session:
             records = list(
@@ -440,8 +437,8 @@ class GraphRetriever:
                     limit=limit,
                 )
             )
-        nodes: dict[str, dict] = {}
-        edges: list[dict] = []
+        nodes: dict[str, dict[str, Any]] = {}
+        edges: list[dict[str, Any]] = []
         for r in records:
             for key in ("n", "m"):
                 n = r[key]
@@ -456,7 +453,7 @@ class GraphRetriever:
             )
         return {"nodes": list(nodes.values()), "edges": edges}
 
-    def _serialize_context(self, subgraph: dict) -> str:
+    def _serialize_context(self, subgraph: dict[str, Any]) -> str:
         """Convert subgraph to a context string for LLM prompting."""
         lines: list[str] = []
 
@@ -465,12 +462,11 @@ class GraphRetriever:
         if records:
             lines.append(f"Query results ({len(records)} rows):")
             for row in records[:25]:
-                parts = []
+                parts: list[str] = []
                 for k, v in row.items():
                     if isinstance(v, dict) and "_labels" in v:
                         label = v["_labels"][0] if v["_labels"] else "Node"
-                        props = {pk: pv for pk, pv in v.items()
-                                 if not pk.startswith("_")}
+                        props = {pk: pv for pk, pv in v.items() if not pk.startswith("_")}
                         parts.append(f"{label}: {props}")
                     elif isinstance(v, dict) and "type" in v:
                         parts.append(f"-[:{v['type']}]->")

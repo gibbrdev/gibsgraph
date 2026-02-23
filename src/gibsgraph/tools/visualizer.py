@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+from typing import Any
 
 import structlog
 
@@ -18,7 +19,7 @@ class GraphVisualizer:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def to_mermaid(self, subgraph: dict, *, max_nodes: int = 20) -> str:
+    def to_mermaid(self, subgraph: dict[str, Any], *, max_nodes: int = 20) -> str:
         """Convert a subgraph dict to a Mermaid flowchart string."""
         nodes = subgraph.get("nodes", [])[:max_nodes]
         edges = subgraph.get("edges", [])
@@ -38,16 +39,14 @@ class GraphVisualizer:
             end = re.sub(r"[^a-zA-Z0-9_]", "_", str(edge.get("end", "")))
             rel_type = edge.get("type", "RELATED")
             if start in seen_nodes and end in seen_nodes:
-                lines.append(f'    {start} -->|{rel_type}| {end}')
+                lines.append(f"    {start} -->|{rel_type}| {end}")
 
         return "\n".join(lines)
 
-    def bloom_url(self, subgraph: dict) -> str:
+    def bloom_url(self, subgraph: dict[str, Any]) -> str:
         """Generate a Neo4j Bloom deep-link URL for the subgraph."""
         # Extract node IDs for Bloom perspective query
-        node_ids = [
-            str(n.get("id", "")) for n in subgraph.get("nodes", []) if n.get("id")
-        ]
+        node_ids = [str(n.get("id", "")) for n in subgraph.get("nodes", []) if n.get("id")]
         if not node_ids:
             return ""
 
@@ -58,10 +57,10 @@ class GraphVisualizer:
         log.debug("visualizer.bloom_url", node_count=len(node_ids))
         return url
 
-    def to_html_pyvis(self, subgraph: dict) -> str:
+    def to_html_pyvis(self, subgraph: dict[str, Any]) -> str:
         """Generate an interactive PyVis HTML string (requires pyvis package)."""
         try:
-            from pyvis.network import Network  # type: ignore[import-untyped]
+            from pyvis.network import Network  # type: ignore[import-not-found]
         except ImportError as exc:
             msg = "Install pyvis: pip install gibsgraph[ui]"
             raise ImportError(msg) from exc
@@ -72,4 +71,4 @@ class GraphVisualizer:
             net.add_node(label, label=label)
         for edge in subgraph.get("edges", []):
             net.add_edge(str(edge["start"]), str(edge["end"]), label=edge.get("type", ""))
-        return net.generate_html()
+        return str(net.generate_html())

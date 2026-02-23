@@ -3,7 +3,7 @@
 from gibsgraph._graph import Answer, Graph, IngestResult
 
 __version__ = "0.1.0"
-__all__ = ["Graph", "Answer", "IngestResult"]
+__all__ = ["Answer", "Graph", "IngestResult"]
 
 # Power-user imports — available but not in the spotlight:
 # from gibsgraph.agent import GibsGraphAgent

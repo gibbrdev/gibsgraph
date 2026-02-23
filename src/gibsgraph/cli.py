@@ -74,7 +74,7 @@ def _cmd_ingest(path: str) -> None:
 
     try:
         g = Graph(read_only=False)
-        result = g.ingest(open(path).read(), source=path)  # noqa: WPS515
+        result = g.ingest(open(path).read(), source=path)
         console.print(f"[green]✓[/] {result}")
     except Exception as exc:
         console.print(f"[bold red]Error:[/] {exc}")

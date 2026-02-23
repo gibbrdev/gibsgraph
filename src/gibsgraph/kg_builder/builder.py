@@ -75,7 +75,7 @@ class KGBuilder:
     def close(self) -> None:
         self._driver.close()
 
-    def __enter__(self) -> "KGBuilder":
+    def __enter__(self) -> KGBuilder:
         return self
 
     def __exit__(self, *_: object) -> None:

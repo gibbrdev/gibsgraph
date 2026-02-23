@@ -29,14 +29,14 @@ class Settings(BaseSettings):
     llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
 
     # Embeddings
-    embedding_model: str = Field(
-        default="text-embedding-3-small", alias="EMBEDDING_MODEL"
-    )
+    embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
     embedding_dimensions: int = Field(default=1536, alias="EMBEDDING_DIMENSIONS")
 
     # Agent
     agent_max_steps: int = Field(default=10, alias="AGENT_MAX_STEPS")
-    agent_checkpoint_db: str = Field(default="sqlite:///checkpoints.db", alias="AGENT_CHECKPOINT_DB")
+    agent_checkpoint_db: str = Field(
+        default="sqlite:///checkpoints.db", alias="AGENT_CHECKPOINT_DB"
+    )
 
     # Observability (optional)
     langsmith_api_key: SecretStr | None = Field(default=None, alias="LANGSMITH_API_KEY")

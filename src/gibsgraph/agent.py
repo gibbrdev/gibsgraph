@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
@@ -27,7 +29,7 @@ class AgentState(BaseModel):
 
     query: str
     usecase: str = ""
-    subgraph: dict | None = None
+    subgraph: dict[str, Any] | None = None
     schema_cypher: str | None = None
     retrieved_context: str = ""
     explanation: str = ""
@@ -43,7 +45,7 @@ class AgentState(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def classify_usecase(state: AgentState, *, settings: Settings) -> dict:
+def classify_usecase(state: AgentState, *, settings: Settings) -> dict[str, Any]:
     """Classify the query into a usecase category via LLM."""
     log.info("classify_usecase", query=state.query[:80])
 
@@ -63,12 +65,12 @@ def classify_usecase(state: AgentState, *, settings: Settings) -> dict:
         "- general (anything else)\n\n"
         f"Question: {state.query}"
     )
-    usecase = response.content.strip().lower().replace(" ", "_")
+    usecase = str(response.content).strip().lower().replace(" ", "_")
     log.info("classify_usecase.result", usecase=usecase)
     return {"usecase": usecase, "steps": state.steps + 1}
 
 
-def retrieve_subgraph(state: AgentState, *, settings: Settings) -> dict:
+def retrieve_subgraph(state: AgentState, *, settings: Settings) -> dict[str, Any]:
     """Run retrieval and return the subgraph + context."""
     log.info("retrieve_subgraph", usecase=state.usecase)
     retriever = GraphRetriever(settings=settings)
@@ -80,14 +82,14 @@ def retrieve_subgraph(state: AgentState, *, settings: Settings) -> dict:
             "cypher_used": result.cypher,
             "steps": state.steps + 1,
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.error("retrieve_subgraph_failed", error=str(exc))
         return {"errors": [*state.errors, str(exc)], "steps": state.steps + 1}
     finally:
         retriever.close()
 
 
-def generate_explanation(state: AgentState, *, settings: Settings) -> dict:
+def generate_explanation(state: AgentState, *, settings: Settings) -> dict[str, Any]:
     """Generate a natural language explanation from the retrieved context."""
     log.info("generate_explanation")
 
@@ -113,12 +115,12 @@ def generate_explanation(state: AgentState, *, settings: Settings) -> dict:
         f"Cypher used: {state.cypher_used}"
     )
 
-    explanation = response.content.strip()
+    explanation = str(response.content).strip()
     log.info("generate_explanation.done", length=len(explanation))
     return {"explanation": explanation, "steps": state.steps + 1}
 
 
-def validate_output(state: AgentState) -> dict:
+def validate_output(state: AgentState) -> dict[str, Any]:
     """Validate Cypher and flag if human review is needed."""
     validator = CypherValidator()
     is_valid = validator.validate(state.cypher_used) if state.cypher_used else True
@@ -126,7 +128,7 @@ def validate_output(state: AgentState) -> dict:
     return {"requires_human_review": requires_review, "steps": state.steps + 1}
 
 
-def visualize(state: AgentState, *, settings: Settings) -> dict:
+def visualize(state: AgentState, *, settings: Settings) -> dict[str, Any]:
     """Generate Mermaid / Neo4j Bloom visualization URL."""
     if not state.subgraph:
         return {"steps": state.steps + 1}
@@ -154,20 +156,20 @@ def should_continue(state: AgentState, max_steps: int = 10) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_graph(settings: Settings | None = None) -> CompiledStateGraph:
+def build_graph(settings: Settings | None = None) -> CompiledStateGraph:  # type: ignore[type-arg]
     """Compile and return the LangGraph agent."""
     settings = settings or get_settings()
 
-    def _classify(state: AgentState) -> dict:
+    def _classify(state: AgentState) -> dict[str, Any]:
         return classify_usecase(state, settings=settings)
 
-    def _retrieve(state: AgentState) -> dict:
+    def _retrieve(state: AgentState) -> dict[str, Any]:
         return retrieve_subgraph(state, settings=settings)
 
-    def _explain(state: AgentState) -> dict:
+    def _explain(state: AgentState) -> dict[str, Any]:
         return generate_explanation(state, settings=settings)
 
-    def _visualize(state: AgentState) -> dict:
+    def _visualize(state: AgentState) -> dict[str, Any]:
         return visualize(state, settings=settings)
 
     graph = StateGraph(AgentState)
@@ -205,7 +207,7 @@ class GibsGraphAgent:
         self.kg_builder = KGBuilder(settings=self.settings)
 
     @classmethod
-    def from_env(cls) -> "GibsGraphAgent":
+    def from_env(cls) -> GibsGraphAgent:
         """Create agent from environment variables / .env file."""
         return cls(settings=get_settings())
 

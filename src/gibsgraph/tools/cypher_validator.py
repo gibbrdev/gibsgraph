@@ -13,10 +13,10 @@ _INJECTION_PATTERNS = [
     r";\s*DROP",
     r";\s*DELETE",
     r";\s*DETACH",
-    r"CALL\s+\{",          # subquery injection vector
-    r"LOAD\s+CSV",         # file system access
-    r"apoc\.export",       # APOC export procedures
-    r"apoc\.load",         # APOC load procedures
+    r"CALL\s+\{",  # subquery injection vector
+    r"LOAD\s+CSV",  # file system access
+    r"apoc\.export",  # APOC export procedures
+    r"apoc\.load",  # APOC load procedures
 ]
 
 _COMPILED_PATTERNS = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]
@@ -59,12 +59,10 @@ class CypherValidator:
                 )
 
         if _INTERPOLATION_PATTERN.search(cypher):
-            raise CypherValidationError(
-                "String interpolation detected — use $param syntax instead"
-            )
+            raise CypherValidationError("String interpolation detected — use $param syntax instead")
 
         log.debug("cypher_validator.valid", cypher_length=len(cypher))
 
     def extract_parameters(self, cypher: str) -> list[str]:
         """Return list of $parameter names referenced in the query."""
-        return re.findall(r'\$(\w+)', cypher)
+        return re.findall(r"\$(\w+)", cypher)

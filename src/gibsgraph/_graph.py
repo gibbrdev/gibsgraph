@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import structlog
+
+if TYPE_CHECKING:
+    from gibsgraph.agent import GibsGraphAgent
 
 log = structlog.get_logger(__name__)
 
@@ -24,8 +27,8 @@ class Answer:
     answer: str
     cypher: str = ""
     confidence: float = 0.0
-    visualization: str = ""          # Mermaid string
-    bloom_url: str = ""              # Neo4j Bloom deep-link
+    visualization: str = ""  # Mermaid string
+    bloom_url: str = ""  # Neo4j Bloom deep-link
     nodes_retrieved: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -68,6 +71,7 @@ def _resolve_llm(llm: str) -> str:
     # Load .env so API keys are available via os.getenv
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass
@@ -128,9 +132,9 @@ class Graph:
         from gibsgraph.config import Settings
 
         # Resolve connection — kwargs win over env vars
-        resolved_uri = uri or os.getenv("NEO4J_URI", "bolt://localhost:7687")
-        resolved_password = password or os.getenv("NEO4J_PASSWORD", "")
-        resolved_username = username or os.getenv("NEO4J_USERNAME", "neo4j")
+        resolved_uri: str = uri or os.getenv("NEO4J_URI") or "bolt://localhost:7687"
+        resolved_password: str = password or os.getenv("NEO4J_PASSWORD") or ""
+        resolved_username: str = username or os.getenv("NEO4J_USERNAME") or "neo4j"
 
         if not resolved_password:
             raise ValueError(
@@ -146,7 +150,7 @@ class Graph:
             LLM_MODEL=_resolve_llm(llm),
         )
         self._top_k = top_k
-        self._agent: "GibsGraphAgent | None" = None  # lazy init
+        self._agent: GibsGraphAgent | None = None  # lazy init
         log.info("graph.ready", uri=resolved_uri, llm=self._settings.llm_model)
 
     # ------------------------------------------------------------------
@@ -170,7 +174,7 @@ class Graph:
             result = g.ask("Which companies are subsidiaries of Apple?")
             print(result)                  # prints the answer
             print(result.cypher)           # the Cypher that was run
-            print(result.confidence)       # 0.0–1.0
+            print(result.confidence)       # 0.0-1.0
         """
         log.info("graph.ask", question=question[:100])
         agent_result = self._agent_instance().ask(question)
@@ -237,17 +241,19 @@ class Graph:
     # Private
     # ------------------------------------------------------------------
 
-    def _agent_instance(self) -> "GibsGraphAgent":
+    def _agent_instance(self) -> GibsGraphAgent:
         """Lazy-init the agent on first use."""
         if self._agent is None:
             from gibsgraph.agent import GibsGraphAgent
+
             self._agent = GibsGraphAgent(settings=self._settings)
         return self._agent
 
-    def _to_mermaid(self, subgraph: dict | None) -> str:
+    def _to_mermaid(self, subgraph: dict[str, Any] | None) -> str:
         if not subgraph:
             return ""
         from gibsgraph.tools.visualizer import GraphVisualizer
+
         return GraphVisualizer(settings=self._settings).to_mermaid(subgraph)
 
     def __repr__(self) -> str:

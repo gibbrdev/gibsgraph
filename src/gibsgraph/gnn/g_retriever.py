@@ -5,6 +5,8 @@ Reference: He et al. (2024) — https://arxiv.org/abs/2402.07630
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 
 log = structlog.get_logger(__name__)
@@ -29,8 +31,8 @@ class GRetriever:
     def load(self) -> None:
         """Lazy-load the fine-tuned model weights."""
         try:
-            import torch  # noqa: F401
-            from torch_geometric.data import Data  # noqa: F401
+            import torch  # type: ignore[import-not-found]  # noqa: F401
+            from torch_geometric.data import Data  # type: ignore[import-not-found]  # noqa: F401
         except ImportError as exc:
             msg = "Install GNN dependencies: pip install gibsgraph[gnn]"
             raise ImportError(msg) from exc
@@ -41,7 +43,7 @@ class GRetriever:
         self._loaded = True
         log.info("g_retriever.model_loaded")
 
-    def predict(self, question: str, subgraph: dict) -> str:
+    def predict(self, question: str, subgraph: dict[str, Any]) -> str:
         """Run inference: question + subgraph → natural language answer."""
         if not self._loaded:
             self.load()
@@ -54,7 +56,7 @@ class GRetriever:
 
         return f"[G-Retriever stub] Answer for: {question}"
 
-    def _subgraph_to_pyg(self, subgraph: dict) -> "torch_geometric.data.Data":  # type: ignore[name-defined]  # noqa: F821
+    def _subgraph_to_pyg(self, subgraph: dict[str, Any]) -> object:
         """Convert subgraph dict to PyTorch Geometric Data object."""
         import torch
         from torch_geometric.data import Data
