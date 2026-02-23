@@ -89,4 +89,4 @@ We're a library. Other tools do those things well.
 Open an issue. Label it `roadmap`.
 
 The features that get built are the ones the community actually needs.
-We track everything in [GitHub Projects](https://github.com/vibecoder/gibsgraph/projects).
+We track everything in [GitHub Projects](https://github.com/gibbrdev/gibsgraph/projects).

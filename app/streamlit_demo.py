@@ -23,7 +23,7 @@ def main() -> None:
         neo4j_user = st.text_input("Username", value="neo4j")
         neo4j_pass = st.text_input("Password", type="password")
         st.divider()
-        st.caption("Built by [vibecoder](https://gibs.dev)")
+        st.caption("Built by [gibbrdev](https://gibs.dev)")
 
     # Tabs
     tab_ask, tab_ingest, tab_viz = st.tabs(["💬 Ask", "📥 Ingest", "🗺️ Visualize"])

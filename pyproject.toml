@@ -59,11 +59,11 @@ dev = [
 full = ["gibsgraph[gnn,ui,dev]"]
 
 [project.urls]
-Homepage = "https://github.com/buildsyncinc/gibsgraph"
-Documentation = "https://vibecoder.github.io/gibsgraph"
-Repository = "https://github.com/buildsyncinc/gibsgraph"
-"Bug Tracker" = "https://github.com/buildsyncinc/gibsgraph/issues"
-Changelog = "https://github.com/buildsyncinc/gibsgraph/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/gibbrdev/gibsgraph"
+Documentation = "https://gibbrdev.github.io/gibsgraph"
+Repository = "https://github.com/gibbrdev/gibsgraph"
+"Bug Tracker" = "https://github.com/gibbrdev/gibsgraph/issues"
+Changelog = "https://github.com/gibbrdev/gibsgraph/blob/main/CHANGELOG.md"
 
 [project.scripts]
 gibsgraph = "gibsgraph.cli:main"

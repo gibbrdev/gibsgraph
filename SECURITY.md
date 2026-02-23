@@ -13,7 +13,7 @@ GibsGraph follows **Coordinated Disclosure** via GitHub Security Advisories.
 **Please do NOT open a public GitHub issue for security vulnerabilities.**
 
 Instead:
-1. Go to [Security Advisories](https://github.com/vibecoder/gibsgraph/security/advisories/new)
+1. Go to [Security Advisories](https://github.com/gibbrdev/gibsgraph/security/advisories/new)
 2. Describe the vulnerability, steps to reproduce, and impact
 3. We will respond within **48 hours** and coordinate a fix + CVE if needed
 

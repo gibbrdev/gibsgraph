@@ -5,7 +5,7 @@ First off — thank you! 🎉 GibsGraph is built by the community.
 ## Quick start for contributors
 
 ```bash
-git clone https://github.com/vibecoder/gibsgraph
+git clone https://github.com/gibbrdev/gibsgraph
 cd gibsgraph
 pip install -e ".[dev]"
 pre-commit install
@@ -14,7 +14,7 @@ cp .env.example .env  # fill in your Neo4j + OpenAI keys
 
 ## Good First Issues
 
-New here? Look for issues labeled [`good first issue`](https://github.com/vibecoder/gibsgraph/issues?q=is%3Aopen+label%3A%22good+first+issue%22). These are:
+New here? Look for issues labeled [`good first issue`](https://github.com/gibbrdev/gibsgraph/issues?q=is%3Aopen+label%3A%22good+first+issue%22). These are:
 
 - 📝 Adding docstrings to existing functions
 - ✅ Writing unit tests for edge cases  
@@ -45,4 +45,4 @@ If you find a security vulnerability, please **do not** open a public issue. See
 
 ## Questions?
 
-Open a [Discussion](https://github.com/vibecoder/gibsgraph/discussions) or join [Discord](https://discord.gg/gibsgraph).
+Open a [Discussion](https://github.com/gibbrdev/gibsgraph/discussions) or join [Discord](https://discord.gg/gibsgraph).

@@ -85,7 +85,7 @@ def _resolve_llm(llm: str) -> str:
     raise RuntimeError(
         "No LLM API key found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY, "
         "or pass llm='gpt-4o-mini' explicitly.\n"
-        "Docs: https://github.com/vibecoder/gibsgraph#configuration"
+        "Docs: https://github.com/gibbrdev/gibsgraph#configuration"
     )
 
 

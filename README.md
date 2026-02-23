@@ -3,8 +3,8 @@
 > **Natural language queries for any Neo4j graph — automatically.**
 > Built by [Victor Gibson](https://gibs.dev) at Gibbr AB
 
-[![CI](https://github.com/buildsyncinc/gibsgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/buildsyncinc/gibsgraph/actions)
-[![Coverage](https://codecov.io/gh/buildsyncinc/gibsgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/buildsyncinc/gibsgraph)
+[![CI](https://github.com/gibbrdev/gibsgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/gibbrdev/gibsgraph/actions)
+[![Coverage](https://codecov.io/gh/gibbrdev/gibsgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/gibbrdev/gibsgraph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
@@ -39,7 +39,7 @@ verify what was queried.
 ## Quick start
 
 ```bash
-pip install git+https://github.com/buildsyncinc/gibsgraph.git
+pip install git+https://github.com/gibbrdev/gibsgraph.git
 ```
 
 ```python
@@ -77,7 +77,7 @@ Or use a `.env` file — copy `.env.example` to get started.
 ## Installation
 
 ```bash
-pip install git+https://github.com/buildsyncinc/gibsgraph.git
+pip install git+https://github.com/gibbrdev/gibsgraph.git
 ```
 
 Optional extras:
