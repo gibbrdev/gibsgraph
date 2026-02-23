@@ -182,7 +182,9 @@ def build_graph(settings: Settings | None = None) -> CompiledStateGraph:
     graph.add_edge("retrieve", "explain")
     graph.add_edge("explain", "validate")
     graph.add_conditional_edges(
-        "validate", should_continue, {"visualize": "visualize", END: END}
+        "validate",
+        should_continue,
+        {"visualize": "visualize", "human_review": END, END: END},
     )
     graph.add_edge("visualize", END)
 

@@ -1,4 +1,4 @@
-"""Integration tests — uses mock Neo4j driver."""
+"""Integration tests — uses mock Neo4j driver and mock LLM."""
 
 from unittest.mock import MagicMock, patch
 
@@ -31,7 +31,19 @@ def mock_neo4j():
         yield mock_driver
 
 
-def test_agent_ask_returns_state(mock_settings, mock_neo4j):
+@pytest.fixture
+def mock_llm():
+    """Patch ChatOpenAI to avoid real LLM calls."""
+    with patch("gibsgraph.agent.ChatOpenAI") as mock_cls, \
+         patch("langchain_openai.ChatOpenAI") as mock_langchain_cls:
+        mock_instance = MagicMock()
+        mock_instance.invoke.return_value = MagicMock(content="general")
+        mock_cls.return_value = mock_instance
+        mock_langchain_cls.return_value = mock_instance
+        yield mock_instance
+
+
+def test_agent_ask_returns_state(mock_settings, mock_neo4j, mock_llm):
     agent = GibsGraphAgent(settings=mock_settings)
     result = agent.ask("What is the relationship between Apple and Beats?")
     assert isinstance(result, AgentState)
@@ -39,10 +51,9 @@ def test_agent_ask_returns_state(mock_settings, mock_neo4j):
     assert result.steps > 0
 
 
-def test_agent_ask_no_crash_on_empty_graph(mock_settings, mock_neo4j):
+def test_agent_ask_no_crash_on_empty_graph(mock_settings, mock_neo4j, mock_llm):
     agent = GibsGraphAgent(settings=mock_settings)
     result = agent.ask("random question about nothing")
-    # Should complete without exception
     assert result is not None
 
 
