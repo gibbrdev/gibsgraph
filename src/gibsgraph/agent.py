@@ -45,7 +45,7 @@ def _make_llm(settings: Settings) -> BaseChatModel:
     if provider and provider.name == "mistral":
         from langchain_mistralai import ChatMistralAI  # type: ignore[import-not-found]
 
-        return ChatMistralAI(
+        return ChatMistralAI(  # type: ignore[no-any-return]
             model=model,
             temperature=settings.llm_temperature,
             max_retries=settings.llm_max_retries,
@@ -59,7 +59,7 @@ def _make_llm(settings: Settings) -> BaseChatModel:
             temperature=settings.llm_temperature,
             max_retries=settings.llm_max_retries,
             base_url=provider.base_url,
-            api_key=os.getenv(provider.env_key, ""),
+            api_key=os.getenv(provider.env_key) or "",  # type: ignore[arg-type]
         )
     # Default: native OpenAI (also handles unknown model names)
     return ChatOpenAI(
