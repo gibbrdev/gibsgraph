@@ -226,13 +226,18 @@ class GraphRetriever:
         schema = self.discover_schema()
 
         if schema.has_vector_index:
-            return self._retrieve_vector(
+            result = self._retrieve_vector(
                 query,
                 schema=schema,
                 top_k=top_k,
                 min_score=min_score,
                 neighbourhood_limit=neighbourhood_limit,
             )
+            # Fall back to text-to-Cypher if vector search found nothing
+            if result.nodes_count == 0 and result.edges_count == 0:
+                log.info("retriever.vector_fallback_to_cypher")
+                return self._retrieve_cypher(query, schema=schema)
+            return result
         return self._retrieve_cypher(query, schema=schema)
 
     # ------------------------------------------------------------------
@@ -405,7 +410,7 @@ class GraphRetriever:
                     val = record[key]
                     # Neo4j Node
                     if hasattr(val, "labels"):
-                        node_dict = dict(val)
+                        node_dict = self._clean_props(dict(val))
                         node_dict["_labels"] = list(val.labels)
                         node_dict["_id"] = val.element_id
                         nodes.append(node_dict)
@@ -416,7 +421,7 @@ class GraphRetriever:
                             "type": val.type,
                             "start": val.start_node.element_id,
                             "end": val.end_node.element_id,
-                            "props": dict(val),
+                            "props": self._clean_props(dict(val)),
                         }
                         edges.append(edge_dict)
                         row[key] = edge_dict
@@ -467,6 +472,11 @@ class GraphRetriever:
             log.warning("retriever.vector_search_failed", error=str(exc))
             return []
 
+    @staticmethod
+    def _clean_props(props: dict[str, Any]) -> dict[str, Any]:
+        """Remove embedding vectors and other large properties from node/edge dicts."""
+        return {k: v for k, v in props.items() if not isinstance(v, list) or len(v) < 50}
+
     def _fetch_neighbourhood(self, *, node_ids: list[str], limit: int) -> dict[str, Any]:
         """Fetch 1-hop neighbourhood for given node IDs."""
         with self._driver.session(database=self.settings.neo4j_database) as session:
@@ -482,13 +492,13 @@ class GraphRetriever:
         for r in records:
             for key in ("n", "m"):
                 n = r[key]
-                nodes[n.element_id] = dict(n)
+                nodes[n.element_id] = self._clean_props(dict(n))
             edges.append(
                 {
                     "type": r["r"].type,
                     "start": r["r"].start_node.element_id,
                     "end": r["r"].end_node.element_id,
-                    "props": dict(r["r"]),
+                    "props": self._clean_props(dict(r["r"])),
                 }
             )
         return {"nodes": list(nodes.values()), "edges": edges}
