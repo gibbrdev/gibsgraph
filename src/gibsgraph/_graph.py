@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -60,11 +60,10 @@ class IngestResult:
 # LLM auto-detection
 # ---------------------------------------------------------------------------
 
-LLMChoice = Literal["auto", "gpt-4o-mini", "gpt-4o", "claude-3-haiku", "claude-3-5-sonnet"]
-
-
 def _resolve_llm(llm: str) -> str:
     """Detect best available LLM from environment if llm='auto'."""
+    from gibsgraph.config import PROVIDERS
+
     if llm != "auto":
         return llm
 
@@ -76,15 +75,15 @@ def _resolve_llm(llm: str) -> str:
     except ImportError:
         pass
 
-    if os.getenv("OPENAI_API_KEY"):
-        log.debug("graph.llm_auto_resolved", choice="gpt-4o-mini")
-        return "gpt-4o-mini"
-    if os.getenv("ANTHROPIC_API_KEY"):
-        log.debug("graph.llm_auto_resolved", choice="claude-3-haiku")
-        return "claude-3-haiku"
+    for provider in PROVIDERS:
+        if os.getenv(provider.env_key):
+            log.debug("graph.llm_auto_resolved", choice=provider.default_model)
+            return provider.default_model
+
+    env_keys = " or ".join(p.env_key for p in PROVIDERS)
     raise RuntimeError(
-        "No LLM API key found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY, "
-        "or pass llm='gpt-4o-mini' explicitly.\n"
+        f"No LLM API key found. Set {env_keys}, "
+        f"or pass llm='{PROVIDERS[0].default_model}' explicitly.\n"
         "Docs: https://github.com/gibbrdev/gibsgraph#configuration"
     )
 
@@ -112,8 +111,8 @@ class Graph:
         password:  Neo4j password. Defaults to NEO4J_PASSWORD env var.
         username:  Neo4j username. Defaults to NEO4J_USERNAME env var or 'neo4j'.
         database:  Neo4j database name. Defaults to 'neo4j'.
-        llm:       LLM to use. 'auto' detects from env keys. Options:
-                   'gpt-4o-mini', 'gpt-4o', 'claude-3-haiku', 'claude-3-5-sonnet'.
+        llm:       LLM to use. 'auto' detects from env keys
+                   (OpenAI → Anthropic → Mistral). Any model name works.
         read_only: If True (default), disables ingest(). Safe for production queries.
         top_k:     Number of candidate nodes to retrieve per query. Default 10.
     """
@@ -125,7 +124,7 @@ class Graph:
         password: str | None = None,
         username: str | None = None,
         database: str = "neo4j",
-        llm: LLMChoice | str = "auto",
+        llm: str = "auto",
         read_only: bool = True,
         top_k: int = 10,
     ) -> None:

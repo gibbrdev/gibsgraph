@@ -2,10 +2,76 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# ---------------------------------------------------------------------------
+# LLM provider registry — single source of truth for model → provider mapping
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class LLMProvider:
+    """Describes one LLM provider: its env key, default model, and prefix.
+
+    Providers with ``base_url`` are OpenAI-compatible and use ``ChatOpenAI``
+    with a custom endpoint.  Native providers (base_url=None) get their own
+    LangChain class in ``_make_llm``.
+    """
+
+    name: str
+    env_key: str
+    default_model: str
+    model_prefixes: tuple[str, ...]
+    base_url: str | None = None
+
+
+PROVIDERS: tuple[LLMProvider, ...] = (
+    LLMProvider(
+        name="openai",
+        env_key="OPENAI_API_KEY",
+        default_model="gpt-4o-mini",
+        model_prefixes=("gpt-", "o1-", "o3-"),
+    ),
+    LLMProvider(
+        name="anthropic",
+        env_key="ANTHROPIC_API_KEY",
+        default_model="claude-3-haiku-20240307",
+        model_prefixes=("claude-",),
+    ),
+    LLMProvider(
+        name="mistral",
+        env_key="MISTRAL_API_KEY",
+        default_model="mistral-small-latest",
+        model_prefixes=("mistral-", "open-mistral-", "open-mixtral-"),
+    ),
+    LLMProvider(
+        name="xai",
+        env_key="XAI_API_KEY",
+        default_model="grok-3",
+        model_prefixes=("grok-",),
+        base_url="https://api.x.ai/v1",
+    ),
+)
+
+DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+DEFAULT_EMBEDDING_DIMENSIONS = 1536
+
+
+def provider_for_model(model: str) -> LLMProvider | None:
+    """Return the provider that owns a given model name, or None."""
+    for p in PROVIDERS:
+        if any(model.startswith(prefix) for prefix in p.model_prefixes):
+            return p
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
 
 
 class Settings(BaseSettings):
@@ -24,13 +90,17 @@ class Settings(BaseSettings):
     # LLM
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
-    llm_model: str = Field(default="gpt-4o-mini", alias="LLM_MODEL")
+    mistral_api_key: SecretStr | None = Field(default=None, alias="MISTRAL_API_KEY")
+    xai_api_key: SecretStr | None = Field(default=None, alias="XAI_API_KEY")
+    llm_model: str = Field(default=PROVIDERS[0].default_model, alias="LLM_MODEL")
     llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
     llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
 
     # Embeddings
-    embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
-    embedding_dimensions: int = Field(default=1536, alias="EMBEDDING_DIMENSIONS")
+    embedding_model: str = Field(default=DEFAULT_EMBEDDING_MODEL, alias="EMBEDDING_MODEL")
+    embedding_dimensions: int = Field(
+        default=DEFAULT_EMBEDDING_DIMENSIONS, alias="EMBEDDING_DIMENSIONS"
+    )
 
     # Agent
     agent_max_steps: int = Field(default=10, alias="AGENT_MAX_STEPS")

@@ -35,6 +35,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mistral = [
+    "langchain-mistralai>=0.2.0",
+]
 gnn = [
     "torch>=2.4.0",
     "torch-geometric>=2.6.0",

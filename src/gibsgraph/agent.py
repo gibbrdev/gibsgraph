@@ -20,9 +20,21 @@ log = structlog.get_logger(__name__)
 
 
 def _make_llm(settings: Settings) -> BaseChatModel:
-    """Create the appropriate LLM client based on the configured model."""
+    """Create the appropriate LLM client based on the configured model.
+
+    Uses the provider registry in config.py to detect which LangChain
+    class to instantiate.  Providers with a ``base_url`` (e.g. xAI/Grok)
+    are OpenAI-compatible and reuse ``ChatOpenAI``.  Falls back to OpenAI
+    for unknown model names.
+    """
+    import os
+
+    from gibsgraph.config import provider_for_model
+
     model = settings.llm_model
-    if model.startswith("claude"):
+    provider = provider_for_model(model)
+
+    if provider and provider.name == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
         return ChatAnthropic(
@@ -30,8 +42,26 @@ def _make_llm(settings: Settings) -> BaseChatModel:
             temperature=settings.llm_temperature,
             max_retries=settings.llm_max_retries,
         )
+    if provider and provider.name == "mistral":
+        from langchain_mistralai import ChatMistralAI  # type: ignore[import-not-found]
+
+        return ChatMistralAI(
+            model=model,
+            temperature=settings.llm_temperature,
+            max_retries=settings.llm_max_retries,
+        )
+    # OpenAI-compatible providers (xAI/Grok, etc.) — same class, custom base_url
     from langchain_openai import ChatOpenAI
 
+    if provider and provider.base_url:
+        return ChatOpenAI(
+            model=model,
+            temperature=settings.llm_temperature,
+            max_retries=settings.llm_max_retries,
+            base_url=provider.base_url,
+            api_key=os.getenv(provider.env_key, ""),
+        )
+    # Default: native OpenAI (also handles unknown model names)
     return ChatOpenAI(
         model=model,
         temperature=settings.llm_temperature,
