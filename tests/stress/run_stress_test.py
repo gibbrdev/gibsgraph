@@ -24,7 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -242,9 +242,9 @@ def main() -> None:
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
     report = {
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
         "tag": args.tag,
         "uri": args.uri,
         "total": total,
