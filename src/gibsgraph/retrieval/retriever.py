@@ -282,7 +282,9 @@ class GraphRetriever:
     # Strategy 2: Text-to-Cypher via LLM
     # ------------------------------------------------------------------
 
-    def _retrieve_cypher(self, query: str, *, schema: GraphSchema) -> RetrievalResult:
+    def _retrieve_cypher(
+        self, query: str, *, schema: GraphSchema, max_retries: int = 1
+    ) -> RetrievalResult:
         """Generate Cypher from natural language using the graph schema."""
         log.info("retriever.strategy_cypher")
 
@@ -293,8 +295,20 @@ class GraphRetriever:
                 strategy="cypher",
             )
 
-        # Execute the generated Cypher (read-only)
-        subgraph = self._execute_read_cypher(cypher)
+        # Execute the generated Cypher (read-only), retry on failure
+        subgraph, error = self._execute_read_cypher(cypher)
+
+        for attempt in range(max_retries):
+            if not error:
+                break
+            log.info("retriever.cypher_retry", attempt=attempt + 1, error=error[:120])
+            cypher = self._generate_cypher(
+                query, schema=schema, error=error, previous_cypher=cypher
+            )
+            if not cypher:
+                break
+            subgraph, error = self._execute_read_cypher(cypher)
+
         context = self._serialize_context(subgraph)
 
         return RetrievalResult(
@@ -306,7 +320,33 @@ class GraphRetriever:
             strategy="cypher",
         )
 
-    def _generate_cypher(self, query: str, *, schema: GraphSchema) -> str:
+    _CYPHER_SYSTEM_PROMPT = (
+        "You are a Neo4j 5 Cypher expert. Generate a single READ-ONLY Cypher query "
+        "to answer the user's question.\n\n"
+        "Neo4j 5 syntax rules (IMPORTANT):\n"
+        "- Use COUNT {{ pattern }} instead of size(pattern). Example: "
+        "COUNT {{ (p)--() }} not size((p)--())\n"
+        "- For shortest path: MATCH p = shortestPath((a)-[*]-(b)) RETURN p\n"
+        "- For variable-length paths use [*..N] with a bound, e.g. [*..6]\n"
+        "- Use elementId(n) not id(n)\n"
+        "- String matching: use toLower() or CONTAINS, not regex unless needed\n\n"
+        "Rules:\n"
+        "- ONLY read queries (MATCH, RETURN, WITH, WHERE, ORDER BY, LIMIT)\n"
+        "- NEVER use CREATE, MERGE, SET, DELETE, DETACH, DROP, CALL {{...}}\n"
+        "- Use properties from the schema provided\n"
+        "- Return useful columns (node properties, counts, paths)\n"
+        "- LIMIT results to 25 max\n"
+        "- Return ONLY the Cypher query, no explanation, no markdown\n"
+    )
+
+    def _generate_cypher(
+        self,
+        query: str,
+        *,
+        schema: GraphSchema,
+        error: str = "",
+        previous_cypher: str = "",
+    ) -> str:
         """Use LLM to generate read-only Cypher from a natural language query."""
         from langchain_openai import ChatOpenAI
 
@@ -316,19 +356,17 @@ class GraphRetriever:
             max_retries=self.settings.llm_max_retries,
         )
 
-        prompt = (
-            "You are a Neo4j Cypher expert. Generate a single READ-ONLY Cypher query "
-            "to answer the user's question.\n\n"
-            f"{schema.to_prompt()}\n\n"
-            "Rules:\n"
-            "- ONLY read queries (MATCH, RETURN, WITH, WHERE, ORDER BY, LIMIT)\n"
-            "- NEVER use CREATE, MERGE, SET, DELETE, DETACH, DROP, CALL {{...}}\n"
-            "- Use properties from the schema above\n"
-            "- Return useful columns (node properties, counts, paths)\n"
-            "- LIMIT results to 25 max\n"
-            "- Return ONLY the Cypher query, no explanation, no markdown\n\n"
-            f"Question: {query}"
-        )
+        prompt = f"{self._CYPHER_SYSTEM_PROMPT}\n{schema.to_prompt()}\n\n"
+
+        if error and previous_cypher:
+            prompt += (
+                f"Your previous Cypher query failed:\n"
+                f"Query: {previous_cypher}\n"
+                f"Error: {error}\n\n"
+                f"Fix the query to resolve this error.\n\n"
+            )
+
+        prompt += f"Question: {query}"
 
         response = llm.invoke(prompt)
         cypher = str(response.content).strip()
@@ -341,14 +379,16 @@ class GraphRetriever:
         log.info("retriever.cypher_generated", cypher=cypher[:200])
         return cypher
 
-    def _execute_read_cypher(self, cypher: str) -> dict[str, Any]:
-        """Execute a read-only Cypher query and return results as subgraph dict."""
+    def _execute_read_cypher(self, cypher: str) -> tuple[dict[str, Any], str]:
+        """Execute a read-only Cypher query. Returns (subgraph, error_message)."""
         from gibsgraph.tools.cypher_validator import CypherValidator
+
+        empty: dict[str, Any] = {"nodes": [], "edges": [], "records": []}
 
         validator = CypherValidator()
         if not validator.validate(cypher):
             log.warning("retriever.cypher_rejected", cypher=cypher[:200])
-            return {"nodes": [], "edges": [], "records": []}
+            return empty, "Cypher rejected by validator (possible write operation)"
 
         try:
             with self._driver.session(database=self.settings.neo4j_database) as session:
@@ -384,11 +424,11 @@ class GraphRetriever:
                         row[key] = val
                 tabular.append(row)
 
-            return {"nodes": nodes, "edges": edges, "records": tabular}
+            return {"nodes": nodes, "edges": edges, "records": tabular}, ""
 
         except Exception as exc:
             log.error("retriever.cypher_execution_failed", error=str(exc))
-            return {"nodes": [], "edges": [], "records": []}
+            return empty, str(exc)
 
     # ------------------------------------------------------------------
     # Shared helpers
