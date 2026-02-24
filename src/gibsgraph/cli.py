@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -21,10 +22,10 @@ def main() -> None:
     if len(sys.argv) < 2 or sys.argv[1] in ("--help", "-h"):
         console.print("[bold]GibsGraph[/] — natural language queries for Neo4j\n")
         console.print("[bold]Usage:[/]")
-        console.print("  gibsgraph ask <question>    Ask a question about your graph")
-        console.print("  gibsgraph ingest <file>     Ingest a text file into the graph")
-        console.print("  gibsgraph --version         Show version")
-        console.print("  gibsgraph --help            Show this help\n")
+        console.print("  gibsgraph ask <question> [--format text|json]    Ask a question")
+        console.print("  gibsgraph ingest <file>                          Ingest text")
+        console.print("  gibsgraph --version                              Show version")
+        console.print("  gibsgraph --help                                 Show help\n")
         console.print("[dim]Set NEO4J_PASSWORD and OPENAI_API_KEY (or ANTHROPIC_API_KEY) first.[/]")
         sys.exit(0)
 
@@ -38,8 +39,21 @@ def main() -> None:
         if len(sys.argv) < 3:
             console.print("[bold red]Error:[/] Please provide a question.")
             sys.exit(1)
-        question = " ".join(sys.argv[2:])
-        _cmd_ask(question)
+        
+        # Parse --format flag
+        output_format = "text"
+        args = sys.argv[2:]
+        if "--format" in args:
+            idx = args.index("--format")
+            if idx + 1 < len(args):
+                output_format = args[idx + 1]
+                args = args[:idx] + args[idx + 2:]
+            else:
+                console.print("[bold red]Error:[/] --format requires a value (text or json)")
+                sys.exit(1)
+        
+        question = " ".join(args)
+        _cmd_ask(question, output_format=output_format)
 
     elif command == "ingest":
         if len(sys.argv) < 3:
@@ -54,9 +68,35 @@ def main() -> None:
         sys.exit(1)
 
 
-def _cmd_ask(question: str) -> None:
+def _cmd_ask(question: str, *, output_format: str = "text") -> None:
     from gibsgraph import Graph
 
+    if output_format not in ("text", "json"):
+        console.print(f"[bold red]Error:[/] Invalid format '{output_format}'. Use 'text' or 'json'.")
+        sys.exit(1)
+
+    if output_format == "json":
+        # JSON output mode - suppress rich formatting
+        try:
+            with Graph() as g:
+                result = g.ask(question)
+            
+            output = {
+                "question": question,
+                "answer": result.answer,
+                "cypher": result.cypher,
+                "confidence": result.confidence,
+                "nodes_retrieved": getattr(result, "nodes_retrieved", None),
+                "errors": result.errors if result.errors else None,
+            }
+            print(json.dumps(output, indent=2))
+        except Exception as exc:
+            error_output = {"error": str(exc), "question": question}
+            print(json.dumps(error_output, indent=2))
+            sys.exit(1)
+        return
+
+    # Text output mode (default) - rich formatting
     console.print(f"\n[bold cyan]GibsGraph[/] — asking: [italic]{question}[/]\n")
 
     try:
