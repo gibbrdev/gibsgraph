@@ -67,8 +67,43 @@ Set environment variables (or pass them directly):
 ```bash
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_PASSWORD=your_password
-export OPENAI_API_KEY=sk-...     # or ANTHROPIC_API_KEY
 ```
+
+### Supported LLM Providers
+
+GibsGraph supports multiple LLM providers, auto-detected from your environment variables:
+
+| Provider | Environment Variable | Installation |
+|----------|---------------------|--------------|
+| OpenAI | `OPENAI_API_KEY` | Default |
+| Anthropic | `ANTHROPIC_API_KEY` | Default |
+| Mistral | `MISTRAL_API_KEY` | `pip install gibsgraph[mistral]` |
+| xAI/Grok | `XAI_API_KEY` | Default |
+
+### Example `.env` file
+
+```bash
+# Neo4j connection
+NEO4J_URI=bolt://localhost:7687
+NEO4J_PASSWORD=your_password
+
+# LLM Provider (set one or more)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+MISTRAL_API_KEY=...
+XAI_API_KEY=...
+
+# Optional: explicitly specify provider (defaults to auto-detection)
+# LLM_PROVIDER=openai  # Options: openai, anthropic, mistral, xai
+```
+
+### Auto-Detection
+
+When `llm="auto"` (default), GibsGraph detects providers in this priority order:
+1. OpenAI (if `OPENAI_API_KEY` is set)
+2. Anthropic (if `ANTHROPIC_API_KEY` is set)
+3. Mistral (if `MISTRAL_API_KEY` is set)
+4. xAI/Grok (if `XAI_API_KEY` is set)
 
 Or use a `.env` file — copy `.env.example` to get started.
 
