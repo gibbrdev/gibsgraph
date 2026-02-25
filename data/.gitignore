@@ -1,0 +1,5 @@
+# Raw scraped data (large, fetch on demand)
+raw/
+
+# Processed data (derived artifacts — regenerate with scripts/)
+processed/

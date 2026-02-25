@@ -28,6 +28,13 @@ env/
 # Confidential
 ROADMAP_INTERNAL.md
 
+# Expert graph data (large, derived — regenerate with data/scripts/)
+data/raw/
+data/processed/
+
+# Internal specs and design docs (not for public repo)
+docs/specs/
+
 # Testing / coverage
 .coverage
 htmlcov/
@@ -52,6 +59,9 @@ Thumbs.db
 
 # Checkpoints
 checkpoints.db
+
+# Platform (proprietary — separate repo)
+platform/
 
 # Claude Code
 .claude/

@@ -104,6 +104,16 @@ docker compose up
 4. **Pydantic for state**: All inter-node data via `AgentState` fields.
 5. **Parameterized typing**: `mypy --strict` must pass. No bare `Any`.
 6. **structlog not print**: Use `log = structlog.get_logger(__name__)` for all logging.
+7. **PENDING.md is the source of truth**: ALWAYS read PENDING.md at the start of every session. After completing any task or starting new work, UPDATE PENDING.md with the current date and status. Every task must have a date. This file tracks what we've done, what we're doing, and what's next.
+8. **GibsGraph (OSS) and GibsGraph Platform (proprietary) are SEPARATE projects.**
+   - `platform/` is gitignored and must NEVER be committed to this repo.
+   - NEVER import, reference, or depend on platform code from this OSS codebase.
+   - NEVER import, copy, or inline OSS code into platform — platform depends on
+     the published `gibsgraph` package (`pip install gibsgraph`), not source files.
+   - NEVER create shared utilities, configs, or modules that serve both projects.
+   - If you are working on GibsGraph OSS, do not touch platform. If you are working
+     on platform, do not touch GibsGraph OSS. They are separate repos, separate
+     concerns, separate boundaries. Do not entangle them.
 
 ## Adding a new agent node
 

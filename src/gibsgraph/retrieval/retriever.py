@@ -15,6 +15,7 @@ import structlog
 from neo4j import GraphDatabase
 
 from gibsgraph.config import Settings
+from gibsgraph.expert import ExpertStore
 
 log = structlog.get_logger(__name__)
 
@@ -94,6 +95,7 @@ class GraphRetriever:
             max_connection_lifetime=settings.neo4j_max_connection_lifetime,
         )
         self._schema: GraphSchema | None = None
+        self._expert = ExpertStore(self._driver, database=settings.neo4j_database)
 
     def discover_schema(self) -> GraphSchema:
         """Auto-discover the graph's labels, relationships, properties, and indexes."""
@@ -101,16 +103,31 @@ class GraphRetriever:
             return self._schema
 
         log.info("retriever.discovering_schema")
-        with self._driver.session(database=self.settings.neo4j_database) as session:
-            # Labels
-            labels = [r["label"] for r in session.run("CALL db.labels() YIELD label RETURN label")]
 
-            # Relationship types
+        # Expert graph labels — exclude from user schema so the LLM
+        # doesn't try to query expert nodes for user questions
+        expert_labels = {
+            "CypherClause", "CypherFunction", "CypherExample",
+            "ModelingPattern", "BestPractice", "Source",
+            "FunctionCategory", "PracticeCategory", "Industry", "Expert",
+        }
+        expert_rels = {"SOURCED_FROM", "BELONGS_TO", "DEMONSTRATES"}
+
+        with self._driver.session(database=self.settings.neo4j_database) as session:
+            # Labels (excluding expert graph labels)
+            labels = [
+                r["label"]
+                for r in session.run("CALL db.labels() YIELD label RETURN label")
+                if r["label"] not in expert_labels
+            ]
+
+            # Relationship types (excluding expert graph relationships)
             rel_types = [
                 r["relationshipType"]
                 for r in session.run(
                     "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType"
                 )
+                if r["relationshipType"] not in expert_rels
             ]
 
             # Node count
@@ -169,17 +186,24 @@ class GraphRetriever:
             )
             seen_patterns: set[str] = set()
             for r in pattern_records:
+                if r["from_l"] in expert_labels or r["to_l"] in expert_labels:
+                    continue
+                if r["rel"] in expert_rels:
+                    continue
                 pat = f"(:{r['from_l']})-[:{r['rel']}]->(:{r['to_l']})"
                 if pat not in seen_patterns:
                     seen_patterns.add(pat)
                     rel_patterns.append(pat)
 
-            # Indexes — check for vector indexes
+            # Indexes — check for user vector indexes (skip expert graph indexes)
             has_vector = False
             vector_index_name = ""
             indexes: list[dict[str, str]] = []
+            expert_index_names = {"expert_embedding", "expert_fulltext"}
             try:
                 for r in session.run("SHOW INDEXES YIELD name, type, labelsOrTypes, properties"):
+                    if r["name"] in expert_index_names:
+                        continue
                     idx = {
                         "name": r["name"],
                         "type": r["type"],
@@ -358,6 +382,12 @@ class GraphRetriever:
         llm = _make_llm(self.settings)
 
         prompt = f"{self._CYPHER_SYSTEM_PROMPT}\n{schema.to_prompt()}\n\n"
+
+        # Inject expert knowledge — relevant patterns, examples, best practices
+        expert_ctx = self._expert.search(query)
+        expert_prompt = expert_ctx.to_prompt()
+        if expert_prompt:
+            prompt += f"{expert_prompt}\n\n"
 
         if error and previous_cypher:
             prompt += (

@@ -1,7 +1,7 @@
 # GibsGraph
 
 > **Natural language queries for any Neo4j graph — automatically.**
-> Built by [Victor Gibson](https://gibs.dev) at Gibbr AB
+> Built by [V.Gibson](https://gibs.dev) at Gibbr AB
 
 [![CI](https://github.com/gibbrdev/gibsgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/gibbrdev/gibsgraph/actions)
 [![Coverage](https://codecov.io/gh/gibbrdev/gibsgraph/branch/main/graph/badge.svg)](https://codecov.io/gh/gibbrdev/gibsgraph)
