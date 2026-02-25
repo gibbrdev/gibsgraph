@@ -69,14 +69,11 @@ def _fintech_schema() -> GraphSchema:
             ),
         ],
         constraints=[
-            "CREATE CONSTRAINT account_id IF NOT EXISTS "
-            "FOR (a:Account) REQUIRE a.id IS UNIQUE",
-            "CREATE CONSTRAINT tx_id IF NOT EXISTS "
-            "FOR (t:Transaction) REQUIRE t.id IS UNIQUE",
+            "CREATE CONSTRAINT account_id IF NOT EXISTS FOR (a:Account) REQUIRE a.id IS UNIQUE",
+            "CREATE CONSTRAINT tx_id IF NOT EXISTS FOR (t:Transaction) REQUIRE t.id IS UNIQUE",
         ],
         indexes=[
-            "CREATE INDEX tx_timestamp IF NOT EXISTS "
-            "FOR (t:Transaction) ON (t.timestamp)",
+            "CREATE INDEX tx_timestamp IF NOT EXISTS FOR (t:Transaction) ON (t.timestamp)",
         ],
         cypher_setup=(
             "CREATE CONSTRAINT account_id IF NOT EXISTS "
@@ -147,12 +144,10 @@ def _generic_label_schema() -> GraphSchema:
             ),
         ],
         constraints=[
-            "CREATE CONSTRAINT entity_id IF NOT EXISTS "
-            "FOR (e:Entity) REQUIRE e.id IS UNIQUE",
+            "CREATE CONSTRAINT entity_id IF NOT EXISTS FOR (e:Entity) REQUIRE e.id IS UNIQUE",
         ],
         indexes=[
-            "CREATE INDEX obj_name IF NOT EXISTS "
-            "FOR (o:Object) ON (o.name)",
+            "CREATE INDEX obj_name IF NOT EXISTS FOR (o:Object) ON (o.name)",
         ],
         cypher_setup=(
             "CREATE CONSTRAINT entity_id IF NOT EXISTS "
@@ -210,8 +205,7 @@ def _orphan_constraint_schema() -> GraphSchema:
             ),
         ],
         constraints=[
-            "CREATE CONSTRAINT ghost_id IF NOT EXISTS "
-            "FOR (g:Ghost) REQUIRE g.id IS UNIQUE",
+            "CREATE CONSTRAINT ghost_id IF NOT EXISTS FOR (g:Ghost) REQUIRE g.id IS UNIQUE",
         ],
         indexes=[
             "CREATE INDEX acct IF NOT EXISTS FOR (a:Account) ON (a.id)",
@@ -250,9 +244,7 @@ class TestSyntacticValidation:
             schema = _fintech_schema()
             schema.cypher_setup = f"{keyword} something"
             result = v.validate(schema)
-            assert result.syntactic is False, (
-                f"Keyword '{keyword}' was not caught"
-            )
+            assert result.syntactic is False, f"Keyword '{keyword}' was not caught"
             assert any(keyword in f for f in result.findings)
 
     def test_forbidden_keyword_case_insensitive(self):
@@ -268,17 +260,23 @@ class TestSyntacticValidation:
         v = SchemaValidator()
         result = v.validate(_generic_label_schema())
         assert result.syntactic is False
-        generic_findings = [
-            f for f in result.findings if "Generic label" in f
-        ]
+        generic_findings = [f for f in result.findings if "Generic label" in f]
         # Entity, Object, Item — all three should be flagged
         assert len(generic_findings) == 3
 
     def test_generic_labels_are_comprehensive(self):
         """Verify the constant covers the most common offenders."""
         expected = {
-            "Entity", "Object", "Item", "Thing", "Node",
-            "Data", "Record", "Element", "Resource", "Entry",
+            "Entity",
+            "Object",
+            "Item",
+            "Thing",
+            "Node",
+            "Data",
+            "Record",
+            "Element",
+            "Resource",
+            "Entry",
         }
         assert GENERIC_LABELS == expected
 
@@ -295,8 +293,7 @@ class TestSyntacticValidation:
         schema = _fintech_schema()
         # Replace constraint with different case in label
         schema.constraints = [
-            "CREATE CONSTRAINT x IF NOT EXISTS "
-            "FOR (a:ACCOUNT) REQUIRE a.id IS UNIQUE"
+            "CREATE CONSTRAINT x IF NOT EXISTS FOR (a:ACCOUNT) REQUIRE a.id IS UNIQUE"
         ]
         result = v.validate(schema)
         # ACCOUNT != Account, so it should be flagged as unknown
@@ -345,9 +342,7 @@ class TestSemanticValidation:
     def test_unavailable_expert_returns_neutral(self):
         """If ExpertStore.is_available() is False, semantic = 0.5."""
         mock_driver = MagicMock()
-        with patch(
-            "gibsgraph.training.validator.ExpertStore"
-        ) as mock_cls:
+        with patch("gibsgraph.training.validator.ExpertStore") as mock_cls:
             store = MagicMock()
             store.is_available.return_value = False
             mock_cls.return_value = store
@@ -358,9 +353,7 @@ class TestSemanticValidation:
     def test_expert_match_boosts_semantic_score(self):
         """When expert search returns high-confidence hits, score > 0.5."""
         mock_driver = MagicMock()
-        with patch(
-            "gibsgraph.training.validator.ExpertStore"
-        ) as mock_cls:
+        with patch("gibsgraph.training.validator.ExpertStore") as mock_cls:
             store = MagicMock()
             store.is_available.return_value = True
             # Return a hit with score > 0.5 for every search
@@ -381,9 +374,7 @@ class TestSemanticValidation:
     def test_no_expert_hits_drops_semantic_score(self):
         """When expert search returns nothing, score drops."""
         mock_driver = MagicMock()
-        with patch(
-            "gibsgraph.training.validator.ExpertStore"
-        ) as mock_cls:
+        with patch("gibsgraph.training.validator.ExpertStore") as mock_cls:
             store = MagicMock()
             store.is_available.return_value = True
             ctx = MagicMock()
@@ -472,9 +463,7 @@ class TestEdgeCases:
         schema.cypher_setup = "DETACH DELETE n; DROP INDEX x"
         result = v.validate(schema)
         assert result.syntactic is False
-        keyword_findings = [
-            f for f in result.findings if "Forbidden keyword" in f
-        ]
+        keyword_findings = [f for f in result.findings if "Forbidden keyword" in f]
         found_keywords = {f.split("'")[1] for f in keyword_findings}
         assert "DELETE" in found_keywords
         assert "DETACH" in found_keywords

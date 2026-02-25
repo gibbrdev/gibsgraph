@@ -26,13 +26,9 @@ def build_socratic_scoring_prompt(
     per dimension. This makes scoring deterministic and auditable.
     """
     node_summary = [
-        f"{n.label} (required: {n.required_properties})"
-        for n in synthesis.graph_schema.nodes
+        f"{n.label} (required: {n.required_properties})" for n in synthesis.graph_schema.nodes
     ]
-    rel_summary = [
-        (r.from_label, r.type, r.to_label)
-        for r in synthesis.graph_schema.relationships
-    ]
+    rel_summary = [(r.from_label, r.type, r.to_label) for r in synthesis.graph_schema.relationships]
 
     return f"""You are a strict Neo4j schema reviewer.
 Answer each question with exactly "YES" or "NO". No explanation.
@@ -103,12 +99,8 @@ def score_structural(schema: GraphSchema) -> tuple[float, list[str]]:
         "All relationships have direction rationale": all(
             r.direction_rationale for r in schema.relationships
         ),
-        "All nodes have required properties": all(
-            n.required_properties for n in schema.nodes
-        ),
-        "All nodes justified by research/pattern": all(
-            n.justified_by for n in schema.nodes
-        ),
+        "All nodes have required properties": all(n.required_properties for n in schema.nodes),
+        "All nodes justified by research/pattern": all(n.justified_by for n in schema.nodes),
         "All relationships justified by research/pattern": all(
             r.justified_by for r in schema.relationships
         ),

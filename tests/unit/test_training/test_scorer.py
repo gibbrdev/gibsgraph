@@ -28,31 +28,43 @@ def _good_schema() -> GraphSchema:
     return GraphSchema(
         nodes=[
             NodeSchema(
-                label="Account", properties=["id", "iban"],
-                required_properties=["id"], description="Bank account",
+                label="Account",
+                properties=["id", "iban"],
+                required_properties=["id"],
+                description="Bank account",
                 justified_by="PSD2 requires account entity",
             ),
             NodeSchema(
-                label="Transaction", properties=["id", "amount", "timestamp"],
+                label="Transaction",
+                properties=["id", "amount", "timestamp"],
                 required_properties=["id", "timestamp"],
-                description="Payment", justified_by="PSD2 RTS Art.2",
+                description="Payment",
+                justified_by="PSD2 RTS Art.2",
             ),
             NodeSchema(
-                label="Merchant", properties=["id", "name"],
-                required_properties=["id"], description="Merchant",
+                label="Merchant",
+                properties=["id", "name"],
+                required_properties=["id"],
+                description="Merchant",
                 justified_by="TRA requires merchant context",
             ),
         ],
         relationships=[
             RelationshipSchema(
-                type="SENT", from_label="Account", to_label="Transaction",
-                properties=[], description="Account sent payment",
+                type="SENT",
+                from_label="Account",
+                to_label="Transaction",
+                properties=[],
+                description="Account sent payment",
                 direction_rationale="Account is actor",
                 justified_by="Fraud ring detection",
             ),
             RelationshipSchema(
-                type="TO", from_label="Transaction", to_label="Merchant",
-                properties=[], description="Payment to merchant",
+                type="TO",
+                from_label="Transaction",
+                to_label="Merchant",
+                properties=[],
+                description="Payment to merchant",
                 direction_rationale="Money flows to merchant",
                 justified_by="TRA merchant scoring",
             ),
@@ -75,15 +87,20 @@ def _bad_schema() -> GraphSchema:
     return GraphSchema(
         nodes=[
             NodeSchema(
-                label="Thing", properties=["id"],
-                required_properties=[], description="A thing",
+                label="Thing",
+                properties=["id"],
+                required_properties=[],
+                description="A thing",
                 justified_by="",
             ),
         ],
         relationships=[
             RelationshipSchema(
-                type="RELATES_TO", from_label="Thing", to_label="Thing",
-                properties=[], description="Generic",
+                type="RELATES_TO",
+                from_label="Thing",
+                to_label="Thing",
+                properties=[],
+                description="Generic",
                 direction_rationale="",
                 justified_by="",
             ),
@@ -96,10 +113,16 @@ def _bad_schema() -> GraphSchema:
 
 def _synth(schema: GraphSchema) -> SynthesisResult:
     return SynthesisResult(
-        model="test-model", scenario="test", design_rationale="test",
-        graph_schema=schema, regulatory_requirements=["PSD2 Art.2"],
-        expert_patterns_used=["fraud ring"], findings_used=["finding 1"],
-        quality_score=0.0, score_breakdown={}, file_path="test.json",
+        model="test-model",
+        scenario="test",
+        design_rationale="test",
+        graph_schema=schema,
+        regulatory_requirements=["PSD2 Art.2"],
+        expert_patterns_used=["fraud ring"],
+        findings_used=["finding 1"],
+        quality_score=0.0,
+        score_breakdown={},
+        file_path="test.json",
     )
 
 
@@ -182,9 +205,7 @@ class TestScoreCypherQuality:
         assert score == 0.5
 
     def test_index_only_scores_half(self):
-        score, _ = score_cypher_quality(
-            "CREATE INDEX x IF NOT EXISTS FOR (n:X) ON (n.id)"
-        )
+        score, _ = score_cypher_quality("CREATE INDEX x IF NOT EXISTS FOR (n:X) ON (n.id)")
         assert score == 0.5
 
     def test_case_insensitive_keyword_detection(self):
@@ -200,24 +221,37 @@ class TestScoreCypherQuality:
 
 class TestComputeSocraticScore:
     def test_all_yes_scores_1(self):
-        answers = {k: "YES" for k in
-                   ["R1", "R2", "R3", "R4", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4"]}
+        answers = {
+            k: "YES"
+            for k in ["R1", "R2", "R3", "R4", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4"]
+        }
         breakdown = compute_score_from_socratic(answers)
         assert breakdown["regulatory_coverage"] == 1.0
         assert breakdown["expert_alignment"] == 1.0
         assert breakdown["completeness"] == 1.0
 
     def test_all_no_scores_0(self):
-        answers = {k: "NO" for k in
-                   ["R1", "R2", "R3", "R4", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4"]}
+        answers = {
+            k: "NO"
+            for k in ["R1", "R2", "R3", "R4", "E1", "E2", "E3", "E4", "C1", "C2", "C3", "C4"]
+        }
         breakdown = compute_score_from_socratic(answers)
         assert all(v == 0.0 for v in breakdown.values())
 
     def test_mixed_answers(self):
         answers = {
-            "R1": "YES", "R2": "YES", "R3": "NO", "R4": "NO",
-            "E1": "YES", "E2": "YES", "E3": "YES", "E4": "NO",
-            "C1": "YES", "C2": "NO", "C3": "NO", "C4": "YES",
+            "R1": "YES",
+            "R2": "YES",
+            "R3": "NO",
+            "R4": "NO",
+            "E1": "YES",
+            "E2": "YES",
+            "E3": "YES",
+            "E4": "NO",
+            "C1": "YES",
+            "C2": "NO",
+            "C3": "NO",
+            "C4": "YES",
         }
         breakdown = compute_score_from_socratic(answers)
         assert breakdown["regulatory_coverage"] == 0.5

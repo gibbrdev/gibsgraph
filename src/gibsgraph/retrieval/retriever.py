@@ -107,9 +107,16 @@ class GraphRetriever:
         # Expert graph labels — exclude from user schema so the LLM
         # doesn't try to query expert nodes for user questions
         expert_labels = {
-            "CypherClause", "CypherFunction", "CypherExample",
-            "ModelingPattern", "BestPractice", "Source",
-            "FunctionCategory", "PracticeCategory", "Industry", "Expert",
+            "CypherClause",
+            "CypherFunction",
+            "CypherExample",
+            "ModelingPattern",
+            "BestPractice",
+            "Source",
+            "FunctionCategory",
+            "PracticeCategory",
+            "Industry",
+            "Expert",
         }
         expert_rels = {"SOURCED_FROM", "BELONGS_TO", "DEMONSTRATES"}
 

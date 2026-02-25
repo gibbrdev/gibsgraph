@@ -83,10 +83,7 @@ class QualityScorer:
         breakdown.update(socratic)
 
         # Weighted overall score
-        overall = sum(
-            breakdown.get(dim, 0.0) * weight
-            for dim, weight in SCORE_WEIGHTS.items()
-        )
+        overall = sum(breakdown.get(dim, 0.0) * weight for dim, weight in SCORE_WEIGHTS.items())
         overall = round(overall, 3)
 
         log.info("scorer.scored", overall=overall, breakdown=breakdown)
@@ -116,10 +113,12 @@ class QualityScorer:
             "cypher_quality": SCORE_WEIGHTS["cypher_quality"],
         }
         total_weight = sum(det_weights.values())
-        overall = sum(
-            breakdown.get(dim, 0.0) * weight
-            for dim, weight in det_weights.items()
-        ) / total_weight if total_weight > 0 else 0.0
+        overall = (
+            sum(breakdown.get(dim, 0.0) * weight for dim, weight in det_weights.items())
+            / total_weight
+            if total_weight > 0
+            else 0.0
+        )
 
         return round(overall, 3), breakdown, all_findings
 
@@ -150,9 +149,7 @@ class QualityScorer:
             # Strip markdown fences if present
             if text.startswith("```"):
                 lines = text.split("\n")
-                text = "\n".join(
-                    line for line in lines if not line.startswith("```")
-                ).strip()
+                text = "\n".join(line for line in lines if not line.startswith("```")).strip()
 
             answers: dict[str, str] = json.loads(text)
             return compute_score_from_socratic(answers)

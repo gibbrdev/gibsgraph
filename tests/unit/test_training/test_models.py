@@ -104,9 +104,7 @@ def fintech_schema() -> GraphSchema:
 
 def empty_schema() -> GraphSchema:
     """A completely empty schema — should fail every check."""
-    return GraphSchema(
-        nodes=[], relationships=[], constraints=[], indexes=[], cypher_setup=""
-    )
+    return GraphSchema(nodes=[], relationships=[], constraints=[], indexes=[], cypher_setup="")
 
 
 def generic_label_schema() -> GraphSchema:
@@ -161,19 +159,25 @@ class TestValidationResult:
         """Scores must be between 0.0 and 1.0."""
         with pytest.raises(ValidationError):
             ValidationResult(
-                syntactic=True, structural_score=1.5,
-                overall_score=0.5, findings=[],
+                syntactic=True,
+                structural_score=1.5,
+                overall_score=0.5,
+                findings=[],
             )
         with pytest.raises(ValidationError):
             ValidationResult(
-                syntactic=True, structural_score=0.5,
-                overall_score=-0.1, findings=[],
+                syntactic=True,
+                structural_score=0.5,
+                overall_score=-0.1,
+                findings=[],
             )
 
     def test_approval_defaults_to_false(self):
         result = ValidationResult(
-            syntactic=True, structural_score=0.9,
-            overall_score=0.85, findings=[],
+            syntactic=True,
+            structural_score=0.9,
+            overall_score=0.85,
+            findings=[],
         )
         assert result.approved_for_training is False
 
@@ -181,11 +185,13 @@ class TestValidationResult:
 class TestUseCaseRecord:
     def test_auto_generates_id(self):
         r1 = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[Differentiator.EU, Differentiator.PSD2],
         )
         r2 = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[Differentiator.EU],
         )
         assert r1.id != r2.id
@@ -193,30 +199,38 @@ class TestUseCaseRecord:
 
     def test_is_approved_false_when_no_validation(self):
         r = UseCaseRecord(
-            industry=Industry.HEALTHCARE, sub_industry="patient",
+            industry=Industry.HEALTHCARE,
+            sub_industry="patient",
             differentiators=[Differentiator.HIPAA],
         )
         assert r.is_approved is False
 
     def test_is_approved_true_when_validation_approves(self):
         r = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[Differentiator.EU],
             validation=ValidationResult(
-                syntactic=True, structural_score=0.9,
-                overall_score=0.88, findings=[],
-                approved_for_training=True, approved_by="reviewer",
+                syntactic=True,
+                structural_score=0.9,
+                overall_score=0.88,
+                findings=[],
+                approved_for_training=True,
+                approved_by="reviewer",
             ),
         )
         assert r.is_approved is True
 
     def test_is_approved_false_when_validation_rejects(self):
         r = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[Differentiator.EU],
             validation=ValidationResult(
-                syntactic=False, structural_score=0.3,
-                overall_score=0.2, findings=["bad schema"],
+                syntactic=False,
+                structural_score=0.3,
+                overall_score=0.2,
+                findings=["bad schema"],
                 approved_for_training=False,
             ),
         )
@@ -225,24 +239,36 @@ class TestUseCaseRecord:
     def test_winning_synthesis_returns_correct_winner(self):
         schema = fintech_schema()
         synth_a = SynthesisResult(
-            model="model-a", scenario="A scenario",
-            design_rationale="A rationale", graph_schema=schema,
-            regulatory_requirements=[], expert_patterns_used=[],
-            findings_used=[], quality_score=0.8,
-            score_breakdown={}, file_path="a.json",
+            model="model-a",
+            scenario="A scenario",
+            design_rationale="A rationale",
+            graph_schema=schema,
+            regulatory_requirements=[],
+            expert_patterns_used=[],
+            findings_used=[],
+            quality_score=0.8,
+            score_breakdown={},
+            file_path="a.json",
         )
         synth_b = SynthesisResult(
-            model="model-b", scenario="B scenario",
-            design_rationale="B rationale", graph_schema=schema,
-            regulatory_requirements=[], expert_patterns_used=[],
-            findings_used=[], quality_score=0.6,
-            score_breakdown={}, file_path="b.json",
+            model="model-b",
+            scenario="B scenario",
+            design_rationale="B rationale",
+            graph_schema=schema,
+            regulatory_requirements=[],
+            expert_patterns_used=[],
+            findings_used=[],
+            quality_score=0.6,
+            score_breakdown={},
+            file_path="b.json",
         )
 
         r = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[Differentiator.EU],
-            synthesis_a=synth_a, synthesis_b=synth_b,
+            synthesis_a=synth_a,
+            synthesis_b=synth_b,
             winner="a",
         )
         assert r.winning_synthesis is synth_a
@@ -252,7 +278,8 @@ class TestUseCaseRecord:
 
     def test_winning_synthesis_none_when_no_winner(self):
         r = UseCaseRecord(
-            industry=Industry.FINTECH, sub_industry="fraud",
+            industry=Industry.FINTECH,
+            sub_industry="fraud",
             differentiators=[],
         )
         assert r.winning_synthesis is None
@@ -264,8 +291,10 @@ class TestUseCaseRecord:
             sub_industry="threat_detection",
             differentiators=[Differentiator.ENTERPRISE, Differentiator.REALTIME],
             validation=ValidationResult(
-                syntactic=True, structural_score=0.75,
-                overall_score=0.72, findings=["minor issue"],
+                syntactic=True,
+                structural_score=0.75,
+                overall_score=0.72,
+                findings=["minor issue"],
                 approved_for_training=True,
             ),
         )

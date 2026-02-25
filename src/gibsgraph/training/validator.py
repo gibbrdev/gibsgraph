@@ -27,8 +27,16 @@ log = structlog.get_logger(__name__)
 
 # Labels that are too generic — a red flag for quality
 GENERIC_LABELS = {
-    "Entity", "Object", "Item", "Thing", "Node",
-    "Data", "Record", "Element", "Resource", "Entry",
+    "Entity",
+    "Object",
+    "Item",
+    "Thing",
+    "Node",
+    "Data",
+    "Record",
+    "Element",
+    "Resource",
+    "Entry",
 }
 
 # Cypher keywords that must never appear in a schema setup script.
@@ -156,9 +164,7 @@ class SchemaValidator:
         upper = schema.cypher_setup.upper()
         for keyword in FORBIDDEN_KEYWORDS:
             if keyword in upper:
-                findings.append(
-                    f"SYNTACTIC: Forbidden keyword '{keyword}' in Cypher setup"
-                )
+                findings.append(f"SYNTACTIC: Forbidden keyword '{keyword}' in Cypher setup")
                 ok = False
 
         # Check that constraints reference existing node labels
@@ -169,9 +175,7 @@ class SchemaValidator:
             if match:
                 label = match.group(1)
                 if label not in schema_labels:
-                    findings.append(
-                        f"SYNTACTIC: Constraint references unknown label '{label}'"
-                    )
+                    findings.append(f"SYNTACTIC: Constraint references unknown label '{label}'")
                     ok = False
 
         # Check for generic labels
@@ -249,9 +253,5 @@ class SchemaValidator:
             return round(min(0.3, (structural + semantic + cypher) / 3), 3)
 
         # Weighted combination of the other stages
-        combined = (
-            structural * 0.40
-            + semantic * 0.35
-            + cypher * 0.25
-        )
+        combined = structural * 0.40 + semantic * 0.35 + cypher * 0.25
         return round(combined, 3)
