@@ -320,7 +320,7 @@ class TestBundledDataFiles:
                 try:
                     json.loads(line)
                 except json.JSONDecodeError as e:
-                    raise AssertionError(f"{name} line {i+1}: invalid JSON: {e}") from e
+                    raise AssertionError(f"{name} line {i + 1}: invalid JSON: {e}") from e
 
     def test_init_py_exists(self):
         assert (self.DATA_DIR / "__init__.py").exists()
