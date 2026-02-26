@@ -27,6 +27,7 @@ env/
 
 # Confidential
 ROADMAP_INTERNAL.md
+PENDING.md
 
 # Expert graph data (large, derived — regenerate with data/scripts/)
 data/raw/

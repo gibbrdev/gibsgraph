@@ -44,6 +44,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Property-based tests verify scoring invariants hold for random inputs
 - All adversarial schemas correctly blocked from approval
 
+## [0.3.0] - 2026-02-25
+
+### Added
+- Expert knowledge graph — 715 nodes (27 clauses, 122 functions, 383 examples, 20 patterns, 309 best practices)
+- Expert embeddings — 849 vectors × 384 dims (all-MiniLM-L6-v2), vector + fulltext indexes
+- 4-stage validation suite (syntactic → structural → semantic → domain)
+- ExpertStore fulltext search wired into `g.ask()`
+- `SchemaValidator`, `GraphSchema`, `Finding` models in `training/`
+
+### Testing
+- 187 tests, 77% coverage
+
+## [0.2.0] - 2026-02-23
+
+### Added
+- Centralized LLM provider registry — OpenAI, Anthropic, Mistral, xAI/Grok auto-detected
+
+### Changed
+- Test coverage 37% → 70% (88 new tests across 5 files)
+- GitHub URLs migrated (buildsyncinc/vibecoder → gibbrdev)
+
+### Fixed
+- mypy errors in `_make_llm` for Mistral and xAI providers
+
 ## [0.1.1] - 2026-02-23
 
 ### Added
@@ -134,3 +158,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `app/` — Streamlit demo
 - `examples/` — usage examples (regulatory KG)
 - `.github/` — CI workflows, issue templates, dependabot
+
+[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/gibbrdev/gibsgraph/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/gibbrdev/gibsgraph/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/gibbrdev/gibsgraph/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/gibbrdev/gibsgraph/releases/tag/v0.1.0

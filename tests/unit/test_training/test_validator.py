@@ -399,11 +399,13 @@ class TestSemanticValidation:
         # Mock db.labels() returning our schema labels
         labels_result = MagicMock()
         labels_result.__iter__ = MagicMock(
-            return_value=iter([
-                {"label": "Account"},
-                {"label": "Transaction"},
-                {"label": "Merchant"},
-            ])
+            return_value=iter(
+                [
+                    {"label": "Account"},
+                    {"label": "Transaction"},
+                    {"label": "Merchant"},
+                ]
+            )
         )
         rel_types_result = MagicMock()
         rel_types_result.__iter__ = MagicMock(
@@ -717,9 +719,7 @@ class TestGoldenSchemas:
         for schema_fn in KNOWN_GOOD:
             schema = schema_fn()
             result = v.validate(schema)
-            assert len(result.errors) == 0, (
-                f"{schema_fn.__name__} has errors: {result.errors}"
-            )
+            assert len(result.errors) == 0, f"{schema_fn.__name__} has errors: {result.errors}"
 
     def test_known_bad_schemas_have_issues(self):
         """All known-bad schemas should have warnings or errors."""

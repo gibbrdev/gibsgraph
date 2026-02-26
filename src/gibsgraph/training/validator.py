@@ -293,9 +293,7 @@ class SchemaValidator:
                             Finding(
                                 severity=FindingSeverity.WARNING,
                                 stage="SEMANTIC",
-                                message=(
-                                    f"Relationship type '{rel.type}' not found in database"
-                                ),
+                                message=(f"Relationship type '{rel.type}' not found in database"),
                             )
                         )
 
@@ -361,9 +359,7 @@ class SchemaValidator:
                                 Finding(
                                     severity=FindingSeverity.WARNING,
                                     stage="SEMANTIC",
-                                    message=(
-                                        f"'{node.label}.{prop}' has {null_count} null values"
-                                    ),
+                                    message=(f"'{node.label}.{prop}' has {null_count} null values"),
                                 )
                             )
 

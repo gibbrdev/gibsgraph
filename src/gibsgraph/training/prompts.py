@@ -113,32 +113,31 @@ def score_structural(schema: GraphSchema) -> tuple[float, list[Finding]]:
     # --- Field presence (WARNING: quality) ---
     # Guard against vacuous truth: all([]) == True in Python, but an empty
     # schema should NOT get credit for "all nodes have X" when there are 0 nodes.
-    checks["All relationships have direction rationale"] = (
-        len(schema.relationships) > 0
-        and all(r.direction_rationale for r in schema.relationships)
+    checks["All relationships have direction rationale"] = len(schema.relationships) > 0 and all(
+        r.direction_rationale for r in schema.relationships
     )
-    checks["All nodes have required properties"] = (
-        len(schema.nodes) > 0 and all(n.required_properties for n in schema.nodes)
+    checks["All nodes have required properties"] = len(schema.nodes) > 0 and all(
+        n.required_properties for n in schema.nodes
     )
-    checks["All nodes justified by research/pattern"] = (
-        len(schema.nodes) > 0 and all(n.justified_by for n in schema.nodes)
+    checks["All nodes justified by research/pattern"] = len(schema.nodes) > 0 and all(
+        n.justified_by for n in schema.nodes
     )
-    checks["All relationships justified by research/pattern"] = (
-        len(schema.relationships) > 0
-        and all(r.justified_by for r in schema.relationships)
-    )
+    checks["All relationships justified by research/pattern"] = len(
+        schema.relationships
+    ) > 0 and all(r.justified_by for r in schema.relationships)
 
     # --- Field quality (INFO: nice-to-have) ---
     min_justification_len = 20
     has_justifiable = len(schema.nodes) > 0 or len(schema.relationships) > 0
-    checks["Justifications are substantive (>20 chars)"] = has_justifiable and all(
-        len(n.justified_by) >= min_justification_len for n in schema.nodes
-    ) and all(len(r.justified_by) >= min_justification_len for r in schema.relationships)
+    checks["Justifications are substantive (>20 chars)"] = (
+        has_justifiable
+        and all(len(n.justified_by) >= min_justification_len for n in schema.nodes)
+        and all(len(r.justified_by) >= min_justification_len for r in schema.relationships)
+    )
 
     # --- Consistency: required_properties must be subset of properties (ERROR) ---
-    checks["Required properties are subset of properties"] = (
-        len(schema.nodes) > 0
-        and all(set(n.required_properties) <= set(n.properties) for n in schema.nodes)
+    checks["Required properties are subset of properties"] = len(schema.nodes) > 0 and all(
+        set(n.required_properties) <= set(n.properties) for n in schema.nodes
     )
 
     # --- Relationship endpoints reference real node labels (ERROR) ---

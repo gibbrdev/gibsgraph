@@ -13,20 +13,22 @@ you ask questions in plain English. It generates Cypher automatically, retrieves
 relevant subgraph, and returns a grounded answer — with the Cypher shown so you can
 verify what was queried.
 
-**[Roadmap](ROADMAP.md)** | **[Changelog](CHANGELOG.md)** | **[Contributing](CONTRIBUTING.md)**
+**[Changelog](CHANGELOG.md)** | **[Contributing](CONTRIBUTING.md)**
 
 ---
 
-## What it does (v0.1.1)
+## What it does (v0.3.1)
 
 - **Natural language queries** — ask anything about your Neo4j graph
+- **Expert knowledge graph** — 715 nodes: 36 clauses, 122 functions, 383 examples, 309 best practices
+- **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
 - **Dual retrieval** — vector search (when index exists) with text-to-Cypher fallback
 - **Cypher self-healing** — if generated Cypher fails, the error is sent back to the LLM for correction
 - **Cypher transparency** — see exactly what was queried
 - **Visualization** — Mermaid diagrams and Neo4j Bloom deep links
 - **Secure by default** — read-only transactions, parameterized Cypher, injection validation
-- **LLM flexibility** — OpenAI and Anthropic supported, auto-detected from env keys
+- **LLM flexibility** — OpenAI, Anthropic, Mistral, xAI/Grok — auto-detected from env keys
 
 ### Planned (not yet implemented)
 
@@ -39,7 +41,7 @@ verify what was queried.
 ## Quick start
 
 ```bash
-pip install git+https://github.com/gibbrdev/gibsgraph.git
+pip install gibsgraph
 ```
 
 ```python
@@ -67,7 +69,7 @@ Set environment variables (or pass them directly):
 ```bash
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_PASSWORD=your_password
-export OPENAI_API_KEY=sk-...     # or ANTHROPIC_API_KEY
+export OPENAI_API_KEY=sk-...     # or ANTHROPIC_API_KEY, MISTRAL_API_KEY, XAI_API_KEY
 ```
 
 Or use a `.env` file — copy `.env.example` to get started.
@@ -77,15 +79,16 @@ Or use a `.env` file — copy `.env.example` to get started.
 ## Installation
 
 ```bash
-pip install git+https://github.com/gibbrdev/gibsgraph.git
+pip install gibsgraph
 ```
 
 Optional extras:
 
 ```bash
-pip install "gibsgraph[gnn]"    # G-Retriever GNN (needs GPU/CUDA)
-pip install "gibsgraph[ui]"     # Streamlit demo UI
-pip install "gibsgraph[full]"   # everything including dev tools
+pip install "gibsgraph[mistral]"  # Mistral LLM support
+pip install "gibsgraph[gnn]"      # G-Retriever GNN (needs GPU/CUDA)
+pip install "gibsgraph[ui]"       # Streamlit demo UI
+pip install "gibsgraph[full]"     # everything including dev tools
 ```
 
 ### Docker
@@ -108,6 +111,8 @@ User Query
 LangGraph Agent (agent.py)
     +-- retrieval/     <- Auto schema discovery + text-to-Cypher + vector search
     +-- tools/         <- Cypher validator, Mermaid visualizer
+    +-- training/      <- 4-stage validation (syntactic/structural/semantic/domain)
+    +-- expert.py      <- ExpertStore — 715 nodes, vector + fulltext indexes
     +-- kg_builder/    <- Text to Neo4j (planned)
     +-- gnn/           <- G-Retriever inference (planned)
     |
@@ -127,14 +132,14 @@ Neo4j Knowledge Graph
 
 ## Testing
 
+216 unit tests, 78% coverage.
+
 ```bash
 pytest                          # All tests
 pytest tests/unit/              # Unit only
 pytest tests/integration/       # Integration (requires Neo4j)
 pytest --cov --cov-report=html  # With coverage report
 ```
-
-Stress tests against the Neo4j Movies dataset: 11/11 queries passing (100%).
 
 ---
 
