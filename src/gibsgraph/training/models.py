@@ -28,6 +28,17 @@ def _short_id() -> str:
 # ---------------------------------------------------------------------------
 
 
+class FindingSeverity(StrEnum):
+    """Severity level for validation findings.
+
+    Enterprise pattern: ERRORs block, WARNINGs degrade, INFOs inform.
+    """
+
+    ERROR = "error"  # Must fix — blocks approval
+    WARNING = "warning"  # Should fix — degrades quality score
+    INFO = "info"  # Good to know — no score impact
+
+
 class Industry(StrEnum):
     """Target industries for use case generation."""
 
@@ -101,6 +112,21 @@ class GraphSchema(BaseModel):
     cypher_setup: str
 
 
+class Finding(BaseModel):
+    """A single validation finding with severity level.
+
+    Enterprise pattern (SonarQube, ESLint): categorize findings by severity
+    so teams can prioritize fixes and avoid blocking on non-critical issues.
+    """
+
+    severity: FindingSeverity
+    stage: str  # SYNTACTIC, STRUCTURAL, SEMANTIC, CYPHER
+    message: str
+
+    def __str__(self) -> str:
+        return f"[{self.severity.value.upper()}] {self.stage}: {self.message}"
+
+
 # ---------------------------------------------------------------------------
 # Research models
 # ---------------------------------------------------------------------------
@@ -160,10 +186,25 @@ class ValidationResult(BaseModel):
     semantic_score: float = Field(ge=0.0, le=1.0, default=0.0)
     domain_score: float = Field(ge=0.0, le=1.0, default=0.0)
     overall_score: float = Field(ge=0.0, le=1.0)
-    findings: list[str]
+    findings: list[Finding]
     approved_for_training: bool = False
     approved_by: str | None = None
     approved_at: datetime | None = None
+
+    @property
+    def errors(self) -> list[Finding]:
+        """ERROR-severity findings — must fix, block approval."""
+        return [f for f in self.findings if f.severity == FindingSeverity.ERROR]
+
+    @property
+    def warnings(self) -> list[Finding]:
+        """WARNING-severity findings — should fix, degrade score."""
+        return [f for f in self.findings if f.severity == FindingSeverity.WARNING]
+
+    @property
+    def infos(self) -> list[Finding]:
+        """INFO-severity findings — awareness only."""
+        return [f for f in self.findings if f.severity == FindingSeverity.INFO]
 
 
 # ---------------------------------------------------------------------------

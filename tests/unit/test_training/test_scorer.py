@@ -7,6 +7,8 @@ good, bad, and edge cases. No LLM calls (Socratic tests are separate).
 from unittest.mock import MagicMock
 
 from gibsgraph.training.models import (
+    Finding,
+    FindingSeverity,
     GraphSchema,
     NodeSchema,
     RelationshipSchema,
@@ -32,21 +34,21 @@ def _good_schema() -> GraphSchema:
                 properties=["id", "iban"],
                 required_properties=["id"],
                 description="Bank account",
-                justified_by="PSD2 requires account entity",
+                justified_by="PSD2 requires account entity for transaction monitoring",
             ),
             NodeSchema(
                 label="Transaction",
                 properties=["id", "amount", "timestamp"],
                 required_properties=["id", "timestamp"],
                 description="Payment",
-                justified_by="PSD2 RTS Art.2",
+                justified_by="PSD2 RTS Art.2 requires tx-level granularity",
             ),
             NodeSchema(
                 label="Merchant",
                 properties=["id", "name"],
                 required_properties=["id"],
                 description="Merchant",
-                justified_by="TRA requires merchant context",
+                justified_by="TRA requires merchant context for risk scoring",
             ),
         ],
         relationships=[
@@ -57,7 +59,7 @@ def _good_schema() -> GraphSchema:
                 properties=[],
                 description="Account sent payment",
                 direction_rationale="Account is actor",
-                justified_by="Fraud ring detection",
+                justified_by="Fraud ring detection requires sender paths",
             ),
             RelationshipSchema(
                 type="TO",
@@ -66,7 +68,7 @@ def _good_schema() -> GraphSchema:
                 properties=[],
                 description="Payment to merchant",
                 direction_rationale="Money flows to merchant",
-                justified_by="TRA merchant scoring",
+                justified_by="TRA merchant scoring requires tx context",
             ),
         ],
         constraints=[
@@ -142,19 +144,27 @@ class TestScoreStructural:
         assert score < 0.5
         assert len(findings) >= 3  # missing constraints, indexes, justifications
 
+    def test_findings_are_finding_objects(self):
+        """All findings must be Finding instances with severity."""
+        _, findings = score_structural(_bad_schema())
+        for f in findings:
+            assert isinstance(f, Finding)
+            assert f.severity in FindingSeverity
+            assert f.stage == "STRUCTURAL"
+
     def test_missing_single_justification_drops_score(self):
         schema = _good_schema()
         schema.nodes[0].justified_by = ""
         score, findings = score_structural(schema)
         assert score < 1.0
-        assert any("justified" in f.lower() for f in findings)
+        assert any("justified" in f.message.lower() for f in findings)
 
     def test_missing_direction_rationale_drops_score(self):
         schema = _good_schema()
         schema.relationships[0].direction_rationale = ""
         score, findings = score_structural(schema)
         assert score < 1.0
-        assert any("direction" in f.lower() for f in findings)
+        assert any("direction" in f.message.lower() for f in findings)
 
     def test_two_nodes_is_not_enough(self):
         """3 node types is the minimum for a real schema."""
@@ -162,14 +172,32 @@ class TestScoreStructural:
         schema.nodes = schema.nodes[:2]
         score, findings = score_structural(schema)
         assert score < 1.0
-        assert any("3 node" in f for f in findings)
+        assert any("3 node" in f.message for f in findings)
 
     def test_one_relationship_is_not_enough(self):
         schema = _good_schema()
         schema.relationships = schema.relationships[:1]
         score, findings = score_structural(schema)
         assert score < 1.0
-        assert any("2 relationship" in f for f in findings)
+        assert any("2 relationship" in f.message for f in findings)
+
+    def test_dangling_endpoint_is_error_severity(self):
+        """Dangling relationship endpoints should be ERROR severity."""
+        schema = _good_schema()
+        schema.relationships[0].from_label = "Ghost"
+        _, findings = score_structural(schema)
+        dangling = [f for f in findings if "Dangling" in f.message]
+        assert len(dangling) >= 1
+        assert all(f.severity == FindingSeverity.ERROR for f in dangling)
+
+    def test_missing_index_is_warning_severity(self):
+        """Missing indexes should be WARNING, not ERROR."""
+        schema = _good_schema()
+        schema.indexes = []
+        _, findings = score_structural(schema)
+        index_findings = [f for f in findings if "index" in f.message.lower()]
+        assert len(index_findings) >= 1
+        assert all(f.severity == FindingSeverity.WARNING for f in index_findings)
 
 
 # ---------------------------------------------------------------------------
@@ -186,27 +214,33 @@ class TestScoreCypherQuality:
     def test_empty_cypher_scores_0(self):
         score, findings = score_cypher_quality("")
         assert score == 0.0
-        assert any("empty" in f.lower() for f in findings)
+        assert any("empty" in f.message.lower() for f in findings)
+        assert findings[0].severity == FindingSeverity.ERROR
 
     def test_dangerous_detach_delete_scores_0(self):
         score, findings = score_cypher_quality("MATCH (n) DETACH DELETE n")
         assert score == 0.0
         # Could match DELETE or DETACH first (set iteration order)
-        assert any("dangerous keyword" in f.lower() for f in findings)
+        assert any("dangerous keyword" in f.message.lower() for f in findings)
+        assert findings[0].severity == FindingSeverity.ERROR
 
     def test_dangerous_drop_scores_0(self):
         score, _findings = score_cypher_quality("DROP INDEX my_index")
         assert score == 0.0
 
     def test_constraint_only_scores_half(self):
-        score, _ = score_cypher_quality(
+        score, findings = score_cypher_quality(
             "CREATE CONSTRAINT x IF NOT EXISTS FOR (n:X) REQUIRE n.id IS UNIQUE"
         )
         assert score == 0.5
+        # Missing index should be WARNING not ERROR
+        assert findings[0].severity == FindingSeverity.WARNING
 
     def test_index_only_scores_half(self):
-        score, _ = score_cypher_quality("CREATE INDEX x IF NOT EXISTS FOR (n:X) ON (n.id)")
+        score, findings = score_cypher_quality("CREATE INDEX x IF NOT EXISTS FOR (n:X) ON (n.id)")
         assert score == 0.5
+        # Missing constraint should be WARNING not ERROR
+        assert findings[0].severity == FindingSeverity.WARNING
 
     def test_case_insensitive_keyword_detection(self):
         """DELETE in lowercase should still be caught."""

@@ -15,7 +15,7 @@ import json
 import structlog
 
 from gibsgraph.config import Settings
-from gibsgraph.training.models import SynthesisResult
+from gibsgraph.training.models import Finding, SynthesisResult
 from gibsgraph.training.prompts import (
     build_socratic_scoring_prompt,
     compute_score_from_socratic,
@@ -58,10 +58,10 @@ class QualityScorer:
         expert_patterns: list[str],
         industry: str,
         differentiators: list[str],
-    ) -> tuple[float, dict[str, float], list[str]]:
+    ) -> tuple[float, dict[str, float], list[Finding]]:
         """Score a synthesis result. Returns (overall, breakdown, findings)."""
         breakdown: dict[str, float] = {}
-        all_findings: list[str] = []
+        all_findings: list[Finding] = []
 
         # Deterministic checks
         structural, struct_findings = score_structural(synthesis.graph_schema)
@@ -91,13 +91,13 @@ class QualityScorer:
 
     def score_deterministic(
         self, synthesis: SynthesisResult
-    ) -> tuple[float, dict[str, float], list[str]]:
+    ) -> tuple[float, dict[str, float], list[Finding]]:
         """Score only deterministic dimensions (no LLM calls).
 
         Useful for fast local validation without API keys.
         """
         breakdown: dict[str, float] = {}
-        all_findings: list[str] = []
+        all_findings: list[Finding] = []
 
         structural, struct_findings = score_structural(synthesis.graph_schema)
         breakdown["structural_validity"] = structural

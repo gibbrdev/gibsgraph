@@ -9,6 +9,8 @@ from pydantic import ValidationError
 
 from gibsgraph.training.models import (
     Differentiator,
+    Finding,
+    FindingSeverity,
     GraphSchema,
     Industry,
     NodeSchema,
@@ -230,7 +232,13 @@ class TestUseCaseRecord:
                 syntactic=False,
                 structural_score=0.3,
                 overall_score=0.2,
-                findings=["bad schema"],
+                findings=[
+                    Finding(
+                        severity=FindingSeverity.ERROR,
+                        stage="SYNTACTIC",
+                        message="bad schema",
+                    )
+                ],
                 approved_for_training=False,
             ),
         )
@@ -294,7 +302,13 @@ class TestUseCaseRecord:
                 syntactic=True,
                 structural_score=0.75,
                 overall_score=0.72,
-                findings=["minor issue"],
+                findings=[
+                    Finding(
+                        severity=FindingSeverity.INFO,
+                        stage="STRUCTURAL",
+                        message="minor issue",
+                    )
+                ],
                 approved_for_training=True,
             ),
         )

@@ -211,6 +211,10 @@ class GraphRetriever:
                 for r in session.run("SHOW INDEXES YIELD name, type, labelsOrTypes, properties"):
                     if r["name"] in expert_index_names:
                         continue
+                    # Skip indexes on expert graph labels
+                    idx_labels = set(r["labelsOrTypes"] or [])
+                    if idx_labels & expert_labels:
+                        continue
                     idx = {
                         "name": r["name"],
                         "type": r["type"],

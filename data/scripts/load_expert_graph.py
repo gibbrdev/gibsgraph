@@ -33,8 +33,8 @@ def load_jsonl(filepath: Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def create_constraints(session) -> None:
-    """Create uniqueness constraints for the expert graph."""
+def create_constraints_and_indexes(session) -> None:
+    """Create uniqueness constraints and performance indexes for the expert graph."""
     constraints = [
         "CREATE CONSTRAINT IF NOT EXISTS FOR (c:CypherClause) REQUIRE c.name IS UNIQUE",
         "CREATE CONSTRAINT IF NOT EXISTS FOR (f:CypherFunction) REQUIRE f.name IS UNIQUE",
@@ -48,6 +48,19 @@ def create_constraints(session) -> None:
     for c in constraints:
         session.run(c)
     print("  Constraints created")
+
+    # Performance indexes for real query patterns:
+    # - ExpertStore searches examples by category (clause vs function)
+    # - Retriever filters by authority_level for confidence-weighted results
+    # - Source.type enables filtering official_docs vs knowledge_base
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS FOR (ex:CypherExample) ON (ex.category)",
+        "CREATE INDEX IF NOT EXISTS FOR (bp:BestPractice) ON (bp.authority_level)",
+        "CREATE INDEX IF NOT EXISTS FOR (s:Source) ON (s.type)",
+    ]
+    for idx in indexes:
+        session.run(idx)
+    print("  Indexes created")
 
 
 def load_clauses(session, clauses: list[dict]) -> int:
@@ -92,7 +105,12 @@ def load_functions(session, functions: list[dict]) -> int:
 
 
 def load_examples(session, examples: list[dict]) -> int:
-    """Load Cypher examples, linking to their clause/function context."""
+    """Load Cypher examples, linking to their clause/function context.
+
+    Bug fix: The original CALL { WITH x WITH x WHERE ... } subquery pattern
+    silently produced zero matches in some Neo4j versions. Using direct
+    conditional MATCH instead.
+    """
     # Deduplicate by cypher text
     seen = set()
     unique = []
@@ -101,7 +119,8 @@ def load_examples(session, examples: list[dict]) -> int:
             seen.add(ex["cypher"])
             unique.append(ex)
 
-    result = session.run("""
+    # Create example nodes first
+    session.run("""
         UNWIND $examples AS e
         CREATE (ex:CypherExample {
             cypher: e.cypher,
@@ -111,26 +130,44 @@ def load_examples(session, examples: list[dict]) -> int:
             source_file: e.source_file,
             authority_level: e.authority_level
         })
-        WITH ex, e
-        CALL {
-            WITH ex, e
-            WITH ex, e WHERE e.category = 'clause'
-            MATCH (clause:CypherClause {name: e.context})
-            MERGE (ex)-[:DEMONSTRATES]->(clause)
-        }
-        CALL {
-            WITH ex, e
-            WITH ex, e WHERE e.category = 'function'
-            MATCH (func:CypherFunction {name: e.context})
-            MERGE (ex)-[:DEMONSTRATES]->(func)
-        }
-        RETURN count(ex) AS cnt
     """, examples=unique)
+
+    # Link clause examples via DEMONSTRATES
+    clause_result = session.run("""
+        MATCH (ex:CypherExample)
+        WHERE ex.category = 'clause'
+        WITH ex
+        MATCH (clause:CypherClause {name: ex.context})
+        MERGE (ex)-[:DEMONSTRATES]->(clause)
+        RETURN count(*) AS cnt
+    """)
+    clause_cnt = clause_result.single()["cnt"]
+    print(f"    Linked {clause_cnt} clause examples via DEMONSTRATES")
+
+    # Link function examples via DEMONSTRATES
+    func_result = session.run("""
+        MATCH (ex:CypherExample)
+        WHERE ex.category = 'function'
+        WITH ex
+        MATCH (func:CypherFunction {name: ex.context})
+        MERGE (ex)-[:DEMONSTRATES]->(func)
+        RETURN count(*) AS cnt
+    """)
+    func_cnt = func_result.single()["cnt"]
+    print(f"    Linked {func_cnt} function examples via DEMONSTRATES")
+
+    # Return total example count
+    result = session.run("MATCH (ex:CypherExample) RETURN count(ex) AS cnt")
     return result.single()["cnt"]
 
 
 def load_patterns(session, patterns: list[dict]) -> int:
-    """Load modeling patterns into the expert graph."""
+    """Load modeling patterns into the expert graph.
+
+    Bug fix: source_file can be None in parsed data. Using COALESCE to
+    default to 'neo4j-modeling-docs' instead of failing silently on
+    MERGE with a null key.
+    """
     result = session.run("""
         UNWIND $patterns AS p
         MERGE (pat:ModelingPattern {name: p.name})
@@ -142,9 +179,11 @@ def load_patterns(session, patterns: list[dict]) -> int:
             pat.source_file = p.source_file,
             pat.authority_level = p.authority_level,
             pat.example_count = size(p.cypher_examples)
-        MERGE (src:Source {path: p.source_file})
+        WITH pat, COALESCE(p.source_file, 'neo4j-modeling-docs') AS src_path,
+             p.authority_level AS auth
+        MERGE (src:Source {path: src_path})
         SET src.type = 'official_docs',
-            src.authority_level = 1
+            src.authority_level = COALESCE(auth, 1)
         MERGE (pat)-[:SOURCED_FROM]->(src)
         RETURN count(pat) AS cnt
     """, patterns=patterns)
@@ -152,7 +191,12 @@ def load_patterns(session, patterns: list[dict]) -> int:
 
 
 def load_practices(session, practices: list[dict]) -> int:
-    """Load best practices into the expert graph."""
+    """Load best practices into the expert graph.
+
+    Bug fix: source_file can be None in parsed data. Using COALESCE to
+    default to 'neo4j-knowledge-base' instead of failing silently on
+    MERGE with a null key.
+    """
     # Deduplicate by title
     seen = set()
     unique = []
@@ -170,12 +214,14 @@ def load_practices(session, practices: list[dict]) -> int:
             bp.example_count = size(p.cypher_examples)
         MERGE (cat:PracticeCategory {name: p.category})
         MERGE (bp)-[:BELONGS_TO]->(cat)
-        MERGE (src:Source {path: p.source_file})
+        WITH bp, p,
+             COALESCE(p.source_file, 'neo4j-knowledge-base') AS src_path
+        MERGE (src:Source {path: src_path})
         SET src.type = CASE
-            WHEN p.source_file CONTAINS 'knowledge-base' THEN 'knowledge_base'
+            WHEN src_path CONTAINS 'knowledge-base' THEN 'knowledge_base'
             ELSE 'official_docs'
             END,
-            src.authority_level = p.authority_level
+            src.authority_level = COALESCE(p.authority_level, 1)
         MERGE (bp)-[:SOURCED_FROM]->(src)
         RETURN count(bp) AS cnt
     """, practices=unique)
@@ -250,8 +296,8 @@ def main() -> None:
                         "OR n:FunctionCategory OR n:PracticeCategory OR n:Industry "
                         "DETACH DELETE n")
 
-        print("\n[1/6] Creating constraints...")
-        create_constraints(session)
+        print("\n[1/6] Creating constraints and indexes...")
+        create_constraints_and_indexes(session)
 
         print("\n[2/6] Loading Cypher clauses...")
         clauses = load_jsonl(PROCESSED_DIR / "cypher_clauses.jsonl")
