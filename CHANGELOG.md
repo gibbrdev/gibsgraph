@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-02-26
+
+### Added
+- Enterprise severity levels for validation findings (ERROR/WARNING/INFO)
+- `Finding` model with severity, stage, and message fields
+- `ValidationResult.errors`, `.warnings`, `.infos` convenience properties
+- 9 missing Cypher clauses: YIELD, DISTINCT, UNION, UNION ALL, CASE, WHEN, THEN, ELSE, SHOW (27 → 36 total)
+- `quality_tier` field on best practices data (high/medium/low — 30%/63%/6%)
+- Independent golden test fixtures: 3 known-good, 3 known-bad, 3 adversarial schemas
+- Hypothesis property-based tests for structural and Cypher scoring
+- Data quality checker script (`validate_expert_graph.py`) — queries live Neo4j instead of self-validation
+- `hypothesis` added to `[dev]` extras
+
+### Changed
+- Semantic validation now queries live Neo4j for real data quality (labels exist, rel types exist, orphan nodes, property completeness) instead of circular keyword overlap against expert graph
+- Semantic score without Neo4j driver is 0.0, not 0.5 — no benefit-of-the-doubt scoring
+- Approval now requires live database connection (overall < 0.7 without semantic checks)
+- Empty schema structural score: 0.167 (was 0.667 due to vacuous truth bug)
+
+### Fixed
+- Vacuous truth in `score_structural()` — `all([])` returns True in Python, empty schemas got unearned credit on 8 of 12 checks
+- DEMONSTRATES relationships: 0 → 200 (CALL subquery bug in Neo4j silently returned 0 rows)
+- SOURCED_FROM null source_file for BestPractice (308) and ModelingPattern (15)
+- Generic labels downgraded from ERROR → WARNING severity (don't block syntactic gate)
+- Expert graph indexes now filtered from user schema discovery in retriever
+
+### Removed
+- Circular semantic validation (expert graph searching itself for keyword overlap)
+- `ExpertStore` dependency in `SchemaValidator` (replaced with direct Neo4j queries)
+- Benefit-of-the-doubt 0.5 score for unavailable semantic validation
+
+### Testing
+- 216 unit tests passing (was 199), 78% coverage
+- Golden fixture tests: supply chain, social network, fraud detection, plus adversarial schemas
+- Property-based tests verify scoring invariants hold for random inputs
+- All adversarial schemas correctly blocked from approval
+
 ## [0.1.1] - 2026-02-23
 
 ### Added

@@ -1,6 +1,12 @@
 """Shared pytest fixtures."""
 
+import sys
+from pathlib import Path
+
 import pytest
+
+# Make tests/ importable so `from tests.fixtures.golden_schemas import ...` works
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 @pytest.fixture(autouse=True)

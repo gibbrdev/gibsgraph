@@ -18,8 +18,13 @@ import re
 import structlog
 from neo4j import Driver
 
-from gibsgraph.expert import ExpertStore
-from gibsgraph.training.models import GraphSchema, SynthesisResult, ValidationResult
+from gibsgraph.training.models import (
+    Finding,
+    FindingSeverity,
+    GraphSchema,
+    SynthesisResult,
+    ValidationResult,
+)
 from gibsgraph.training.prompts import score_cypher_quality, score_structural
 from gibsgraph.training.scorer import QualityScorer
 
@@ -60,13 +65,18 @@ class SchemaValidator:
         *,
         database: str = "neo4j",
     ) -> None:
-        self._expert: ExpertStore | None = None
-        if driver is not None:
-            self._expert = ExpertStore(driver, database=database)
+        self._driver = driver
+        self._database = database
 
     def validate(self, schema: GraphSchema) -> ValidationResult:
-        """Run all 4 validation stages. Returns ValidationResult."""
-        findings: list[str] = []
+        """Run all 4 validation stages. Returns ValidationResult.
+
+        Approval logic uses severity levels (enterprise pattern):
+        - ERROR findings block approval regardless of score
+        - WARNING findings degrade score but don't block alone
+        - INFO findings are purely informational
+        """
+        findings: list[Finding] = []
 
         # Stage 1: Syntactic
         syntactic_ok, syntactic_findings = self._validate_syntactic(schema)
@@ -92,6 +102,10 @@ class SchemaValidator:
             cypher=cypher_score,
         )
 
+        # Approval: no errors AND score >= 0.7
+        has_errors = any(f.severity == FindingSeverity.ERROR for f in findings)
+        approved = overall >= 0.7 and not has_errors
+
         return ValidationResult(
             syntactic=syntactic_ok,
             structural_score=structural_score,
@@ -99,7 +113,7 @@ class SchemaValidator:
             domain_score=cypher_score,
             overall_score=overall,
             findings=findings,
-            approved_for_training=overall >= 0.7 and syntactic_ok,
+            approved_for_training=approved,
         )
 
     def validate_full(
@@ -136,6 +150,7 @@ class SchemaValidator:
         )
 
         all_findings = base_result.findings + scorer_findings
+        has_errors = any(f.severity == FindingSeverity.ERROR for f in all_findings)
 
         return ValidationResult(
             syntactic=base_result.syntactic,
@@ -144,91 +159,224 @@ class SchemaValidator:
             domain_score=breakdown.get("regulatory_coverage", 0.0),
             overall_score=overall,
             findings=all_findings,
-            approved_for_training=overall >= 0.7 and base_result.syntactic,
+            approved_for_training=overall >= 0.7 and not has_errors,
         )
 
     # ------------------------------------------------------------------
     # Stage 1: Syntactic validation
     # ------------------------------------------------------------------
 
-    def _validate_syntactic(self, schema: GraphSchema) -> tuple[bool, list[str]]:
-        """Check that the Cypher setup is syntactically safe."""
-        findings: list[str] = []
-        ok = True
+    def _validate_syntactic(self, schema: GraphSchema) -> tuple[bool, list[Finding]]:
+        """Check that the Cypher setup is syntactically safe.
+
+        Returns (syntactic_ok, findings). syntactic_ok is False only when
+        ERROR-severity findings exist. WARNINGs (like generic labels) don't
+        block the syntactic gate — they degrade score elsewhere.
+        """
+        findings: list[Finding] = []
 
         if not schema.cypher_setup.strip():
-            findings.append("SYNTACTIC: Cypher setup script is empty")
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.ERROR,
+                    stage="SYNTACTIC",
+                    message="Cypher setup script is empty",
+                )
+            )
             return False, findings
 
-        # Check for forbidden write operations
+        # Check for forbidden write operations (ERROR — dangerous)
         upper = schema.cypher_setup.upper()
         for keyword in FORBIDDEN_KEYWORDS:
             if keyword in upper:
-                findings.append(f"SYNTACTIC: Forbidden keyword '{keyword}' in Cypher setup")
-                ok = False
+                findings.append(
+                    Finding(
+                        severity=FindingSeverity.ERROR,
+                        stage="SYNTACTIC",
+                        message=f"Forbidden keyword '{keyword}' in Cypher setup",
+                    )
+                )
 
-        # Check that constraints reference existing node labels
+        # Check that constraints reference existing node labels (ERROR)
         schema_labels = {n.label for n in schema.nodes}
         for constraint in schema.constraints:
-            # Extract label from constraint: FOR (x:Label)
             match = re.search(r"FOR\s*\(\w+:(\w+)\)", constraint, re.IGNORECASE)
             if match:
                 label = match.group(1)
                 if label not in schema_labels:
-                    findings.append(f"SYNTACTIC: Constraint references unknown label '{label}'")
-                    ok = False
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.ERROR,
+                            stage="SYNTACTIC",
+                            message=f"Constraint references unknown label '{label}'",
+                        )
+                    )
 
-        # Check for generic labels
+        # Check for generic labels (WARNING — quality issue, not safety issue)
         for node in schema.nodes:
             if node.label in GENERIC_LABELS:
                 findings.append(
-                    f"SYNTACTIC: Generic label '{node.label}' — use a domain-specific name"
+                    Finding(
+                        severity=FindingSeverity.WARNING,
+                        stage="SYNTACTIC",
+                        message=f"Generic label '{node.label}' — use a domain-specific name",
+                    )
                 )
-                ok = False
 
-        return ok, findings
+        # syntactic_ok = no ERROR-severity findings
+        has_errors = any(f.severity == FindingSeverity.ERROR for f in findings)
+        return not has_errors, findings
 
     # ------------------------------------------------------------------
-    # Stage 3: Semantic validation (expert graph alignment)
+    # Stage 3: Semantic validation (data quality checks)
     # ------------------------------------------------------------------
 
-    def _validate_semantic(self, schema: GraphSchema) -> tuple[float, list[str]]:
-        """Check if schema elements align with expert knowledge."""
-        findings: list[str] = []
+    def _validate_semantic(self, schema: GraphSchema) -> tuple[float, list[Finding]]:
+        """Check schema against actual Neo4j data quality.
 
-        if self._expert is None or not self._expert.is_available():
-            findings.append("SEMANTIC: Expert graph not available — skipped")
-            return 0.5, findings  # neutral score when unavailable
+        When a driver is available, queries the live database to verify:
+        1. Node labels actually exist in the database
+        2. Relationship types exist
+        3. Property completeness (non-null required properties)
+        4. Orphan nodes (nodes with 0 relationships)
+        5. Referential integrity (relationships point to valid targets)
+
+        When no driver is available, returns 0.0 — no benefit-of-the-doubt
+        score for unverified data.
+        """
+        findings: list[Finding] = []
+
+        if self._driver is None:
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.INFO,
+                    stage="SEMANTIC",
+                    message="No Neo4j driver — semantic validation skipped (score 0.0)",
+                )
+            )
+            return 0.0, findings
 
         total_checks = 0
         passed_checks = 0
 
-        # Check if relationship types match known patterns
-        for rel in schema.relationships:
-            total_checks += 1
-            query = f"{rel.from_label} {rel.type} {rel.to_label} graph modeling"
-            ctx = self._expert.search(query, top_k=3)
-            if ctx.hits and ctx.hits[0].score > 0.5:
-                passed_checks += 1
-            else:
-                findings.append(
-                    f"SEMANTIC: Relationship (:{rel.from_label})-[:{rel.type}]->"
-                    f"(:{rel.to_label}) has no expert pattern match"
+        try:
+            with self._driver.session(database=self._database) as session:
+                # 1. Check if schema node labels exist in the database
+                db_labels_result = session.run("CALL db.labels() YIELD label RETURN label")
+                db_labels = {r["label"] for r in db_labels_result}
+
+                for node in schema.nodes:
+                    total_checks += 1
+                    if node.label in db_labels:
+                        passed_checks += 1
+                    else:
+                        findings.append(
+                            Finding(
+                                severity=FindingSeverity.WARNING,
+                                stage="SEMANTIC",
+                                message=f"Label '{node.label}' not found in database",
+                            )
+                        )
+
+                # 2. Check if relationship types exist
+                db_rels_result = session.run(
+                    "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType"
                 )
+                db_rel_types = {r["relationshipType"] for r in db_rels_result}
 
-        # Check if constraint patterns follow best practices
-        if schema.constraints:
-            total_checks += 1
-            ctx = self._expert.search("uniqueness constraint best practice", top_k=2)
-            if ctx.hits:
-                passed_checks += 1
+                for rel in schema.relationships:
+                    total_checks += 1
+                    if rel.type in db_rel_types:
+                        passed_checks += 1
+                    else:
+                        findings.append(
+                            Finding(
+                                severity=FindingSeverity.WARNING,
+                                stage="SEMANTIC",
+                                message=(
+                                    f"Relationship type '{rel.type}' not found in database"
+                                ),
+                            )
+                        )
 
-        # Check if indexes follow query pattern best practices
-        if schema.indexes:
-            total_checks += 1
-            ctx = self._expert.search("index query performance best practice", top_k=2)
-            if ctx.hits:
-                passed_checks += 1
+                # 3. Check for orphan nodes (labels with 0 relationships)
+                for node in schema.nodes:
+                    if node.label not in db_labels:
+                        continue  # already flagged above
+                    total_checks += 1
+                    orphan_result = session.run(
+                        "MATCH (n) WHERE $label IN labels(n) "
+                        "AND NOT (n)--() RETURN count(n) AS orphans",
+                        label=node.label,
+                    )
+                    orphan_rec = orphan_result.single()
+                    orphan_count: int = orphan_rec["orphans"] if orphan_rec else 0
+                    total_result = session.run(
+                        "MATCH (n) WHERE $label IN labels(n) RETURN count(n) AS total",
+                        label=node.label,
+                    )
+                    total_rec = total_result.single()
+                    total_count: int = total_rec["total"] if total_rec else 0
+
+                    if total_count > 0 and orphan_count / total_count < 0.5:
+                        passed_checks += 1
+                    elif total_count == 0:
+                        findings.append(
+                            Finding(
+                                severity=FindingSeverity.WARNING,
+                                stage="SEMANTIC",
+                                message=f"Label '{node.label}' has 0 nodes in database",
+                            )
+                        )
+                    else:
+                        findings.append(
+                            Finding(
+                                severity=FindingSeverity.WARNING,
+                                stage="SEMANTIC",
+                                message=(
+                                    f"Label '{node.label}' has {orphan_count}/{total_count} "
+                                    f"orphan nodes (>50%)"
+                                ),
+                            )
+                        )
+
+                # 4. Check property completeness for required properties
+                for node in schema.nodes:
+                    if node.label not in db_labels or not node.required_properties:
+                        continue
+                    for prop in node.required_properties:
+                        total_checks += 1
+                        null_result = session.run(
+                            "MATCH (n) WHERE $label IN labels(n) "
+                            "AND n[$prop] IS NULL RETURN count(n) AS nulls",
+                            label=node.label,
+                            prop=prop,
+                        )
+                        null_rec = null_result.single()
+                        null_count: int = null_rec["nulls"] if null_rec else 0
+                        if null_count == 0:
+                            passed_checks += 1
+                        else:
+                            findings.append(
+                                Finding(
+                                    severity=FindingSeverity.WARNING,
+                                    stage="SEMANTIC",
+                                    message=(
+                                        f"'{node.label}.{prop}' has {null_count} null values"
+                                    ),
+                                )
+                            )
+
+        except Exception as exc:
+            log.warning("semantic.query_failed", error=str(exc))
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.WARNING,
+                    stage="SEMANTIC",
+                    message=f"Database query failed: {exc}",
+                )
+            )
+            return 0.0, findings
 
         score = round(passed_checks / total_checks, 3) if total_checks > 0 else 0.0
         return score, findings

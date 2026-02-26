@@ -39,6 +39,10 @@ Build a **Neo4j expert system** — not a generic RAG tool.
 | 2026-02-25 | Loaded embeddings into Neo4j | 663/849 embeddings loaded, vector index `expert_embedding` (384-dim cosine) + fulltext index `expert_fulltext` created and verified. |
 | 2026-02-25 | Layer 2: Validation Suite built | 4-stage pipeline (syntactic→structural→semantic→domain). 4 source files: models.py, prompts.py, scorer.py, validator.py. Socratic LLM scoring with 12 yes/no questions. |
 | 2026-02-25 | Layer 2 tests: 61 unit tests | test_models.py (14), test_scorer.py (21), test_validator.py (26). Real schemas, edge cases, no doped tests. 187 total tests, 77% coverage. |
+| 2026-02-26 | Expert graph bug fixes | DEMONSTRATES: 0→200 rels (CALL subquery bug). SOURCED_FROM: fixed null source_file for BestPractice (308) and ModelingPattern (15). 3 indexes added. |
+| 2026-02-26 | Severity refactor (enterprise pattern) | Finding model with ERROR/WARNING/INFO levels. Generic labels downgraded from ERROR→WARNING. Approval = score >= 0.7 AND no errors. |
+| 2026-02-26 | Expert graph self-validation passes | Score 1.0. 1 INFO finding (Industry disconnected). 717 nodes, 8 relationship types, all SOURCED_FROM and DEMONSTRATES working. 199 tests, 77% coverage. |
+| 2026-02-26 | Kill closed-loop validation | Vacuous truth fix (empty schema: 0.667→0.167). Circular semantic replaced with real Neo4j data quality checks (0.0 without driver, not 0.5). Self-validation script rewritten as data quality checker. 9 golden/adversarial test schemas. Hypothesis property-based tests. 9 missing Cypher clauses added (36 total). Best practices quality_tier field. 216 tests, 78% coverage. |
 
 ## In Progress
 
@@ -48,9 +52,9 @@ Build a **Neo4j expert system** — not a generic RAG tool.
 
 ## Resume Next Session
 
-> Pick up here. Layer 2 validation suite built. Next: wire into pipeline + start use case generation.
+> Pick up here. Validation suite complete with enterprise severity levels. Expert graph validated. Next: wire into pipeline + start use case generation.
 
-1. **Expert graph integration test** — test ExpertStore with real Neo4j (715 nodes, 663 embeddings, fulltext + vector indexes)
+1. **Expert graph integration test** — test ExpertStore with real Neo4j (717 nodes, 663 embeddings, fulltext + vector indexes)
 2. **Publish expert dataset** — HuggingFace or similar. Files ready in `data/processed/`
 3. **Phase 2: `g.ingest()`** — documents → knowledge graph, guided by the expert
 
@@ -84,6 +88,9 @@ Build a **Neo4j expert system** — not a generic RAG tool.
 
 > "Generate 1,000 validated graphs. Train on them."
 
+- [ ] Implement USECASE_PIPELINE_SPEC_V2.md (docs/specs/)
+- [x] **Validate our own expert graph** — Layer 2 self-validation passes (score 1.0, 1 INFO). Expert graph bugs fixed. validate_expert_graph.py script created.
+- [ ] **Dogfood: generate "expert neo4j graph" use case** — can the pipeline produce a schema that matches what we built manually? The reproduction test.
 - [ ] Generate synthetic use cases per industry using expert graph
 - [x] Validate each generated graph (syntactic → structural → semantic → domain) — Layer 2 built
 - [ ] Build training dataset from validated graphs
@@ -120,3 +127,6 @@ Build a **Neo4j expert system** — not a generic RAG tool.
 | 2026-02-25 | Fulltext search as default for OSS | Zero extra deps (no sentence-transformers/torch). Vector index pre-computed for future upgrade path. |
 | 2026-02-25 | Renamed `schema` → `graph_schema` in training models | Avoids Pydantic BaseModel.schema() collision. |
 | 2026-02-25 | Spec moved to docs/specs/ (gitignored) | USECASE_PIPELINE_SPEC_V2.md — keeps repo clean, internal docs out of public. |
+| 2026-02-26 | Enterprise severity levels for validation | ERROR/WARNING/INFO instead of binary pass/fail. Generic labels downgraded to WARNING. Matches SonarQube/ESLint patterns. |
+| 2026-02-26 | CALL subquery pattern is unsafe | Neo4j `CALL { WITH x WITH x WHERE ... }` silently returns 0 rows. Use direct MATCH instead. |
+| 2026-02-26 | No closed-loop validation | Validator must not grade its own homework. Semantic validation queries live Neo4j (no more keyword overlap). Without a driver, score=0.0 (no benefit of doubt). Approval requires live database connection. |

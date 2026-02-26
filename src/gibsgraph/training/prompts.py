@@ -9,7 +9,12 @@ Prompt version: 1.0 (2026-02-25)
 
 from __future__ import annotations
 
-from gibsgraph.training.models import GraphSchema, SynthesisResult
+from gibsgraph.training.models import (
+    Finding,
+    FindingSeverity,
+    GraphSchema,
+    SynthesisResult,
+)
 
 
 def build_socratic_scoring_prompt(
@@ -88,56 +93,169 @@ def compute_score_from_socratic(answers: dict[str, str]) -> dict[str, float]:
     return breakdown
 
 
-def score_structural(schema: GraphSchema) -> tuple[float, list[str]]:
-    """Deterministic structural checks. Returns (score, findings)."""
-    findings: list[str] = []
-    checks = {
-        "Has at least 3 node types": len(schema.nodes) >= 3,
-        "Has at least 2 relationship types": len(schema.relationships) >= 2,
-        "Has at least 1 constraint": len(schema.constraints) >= 1,
-        "Has at least 1 index": len(schema.indexes) >= 1,
-        "All relationships have direction rationale": all(
-            r.direction_rationale for r in schema.relationships
-        ),
-        "All nodes have required properties": all(n.required_properties for n in schema.nodes),
-        "All nodes justified by research/pattern": all(n.justified_by for n in schema.nodes),
-        "All relationships justified by research/pattern": all(
-            r.justified_by for r in schema.relationships
-        ),
+def score_structural(schema: GraphSchema) -> tuple[float, list[Finding]]:
+    """Deterministic structural checks with severity levels.
+
+    Returns (score, findings) where each finding has a severity:
+    - ERROR: Broken schema (dangling refs, inconsistent properties)
+    - WARNING: Quality issues (missing justifications, low counts)
+    - INFO: Awareness (disconnected taxonomy nodes)
+    """
+    findings: list[Finding] = []
+    checks: dict[str, bool] = {}
+
+    # --- Minimum counts (WARNING: quality, not broken) ---
+    checks["Has at least 3 node types"] = len(schema.nodes) >= 3
+    checks["Has at least 2 relationship types"] = len(schema.relationships) >= 2
+    checks["Has at least 1 constraint"] = len(schema.constraints) >= 1
+    checks["Has at least 1 index"] = len(schema.indexes) >= 1
+
+    # --- Field presence (WARNING: quality) ---
+    # Guard against vacuous truth: all([]) == True in Python, but an empty
+    # schema should NOT get credit for "all nodes have X" when there are 0 nodes.
+    checks["All relationships have direction rationale"] = (
+        len(schema.relationships) > 0
+        and all(r.direction_rationale for r in schema.relationships)
+    )
+    checks["All nodes have required properties"] = (
+        len(schema.nodes) > 0 and all(n.required_properties for n in schema.nodes)
+    )
+    checks["All nodes justified by research/pattern"] = (
+        len(schema.nodes) > 0 and all(n.justified_by for n in schema.nodes)
+    )
+    checks["All relationships justified by research/pattern"] = (
+        len(schema.relationships) > 0
+        and all(r.justified_by for r in schema.relationships)
+    )
+
+    # --- Field quality (INFO: nice-to-have) ---
+    min_justification_len = 20
+    has_justifiable = len(schema.nodes) > 0 or len(schema.relationships) > 0
+    checks["Justifications are substantive (>20 chars)"] = has_justifiable and all(
+        len(n.justified_by) >= min_justification_len for n in schema.nodes
+    ) and all(len(r.justified_by) >= min_justification_len for r in schema.relationships)
+
+    # --- Consistency: required_properties must be subset of properties (ERROR) ---
+    checks["Required properties are subset of properties"] = (
+        len(schema.nodes) > 0
+        and all(set(n.required_properties) <= set(n.properties) for n in schema.nodes)
+    )
+
+    # --- Relationship endpoints reference real node labels (ERROR) ---
+    node_labels = {n.label for n in schema.nodes}
+    orphan_endpoints = []
+    for r in schema.relationships:
+        if r.from_label not in node_labels:
+            orphan_endpoints.append(f"{r.type}: from_label '{r.from_label}'")
+        if r.to_label not in node_labels:
+            orphan_endpoints.append(f"{r.type}: to_label '{r.to_label}'")
+    checks["Relationship endpoints reference existing nodes"] = len(orphan_endpoints) == 0
+    for ep in orphan_endpoints:
+        findings.append(
+            Finding(
+                severity=FindingSeverity.ERROR,
+                stage="STRUCTURAL",
+                message=f"Dangling endpoint — {ep}",
+            )
+        )
+
+    # --- Connectivity: nodes should participate in at least one relationship ---
+    connected_labels = set()
+    for r in schema.relationships:
+        connected_labels.add(r.from_label)
+        connected_labels.add(r.to_label)
+    disconnected = node_labels - connected_labels
+    # Allow up to 20% disconnected (taxonomy nodes are legitimate)
+    max_disconnected = max(1, len(schema.nodes) // 5)
+    checks["Most nodes participate in relationships"] = len(disconnected) <= max_disconnected
+    if disconnected:
+        findings.append(
+            Finding(
+                severity=FindingSeverity.INFO,
+                stage="STRUCTURAL",
+                message=(
+                    f"{len(disconnected)} node types have no relationships: {sorted(disconnected)}"
+                ),
+            )
+        )
+
+    # Severity mapping for check failures
+    _error_checks = {
+        "Required properties are subset of properties",
+        "Relationship endpoints reference existing nodes",
+    }
+    _info_checks = {
+        "Justifications are substantive (>20 chars)",
     }
 
     for check_name, passed in checks.items():
         if not passed:
-            findings.append(f"STRUCTURAL: {check_name} — FAILED")
+            if check_name in _error_checks:
+                severity = FindingSeverity.ERROR
+            elif check_name in _info_checks:
+                severity = FindingSeverity.INFO
+            else:
+                severity = FindingSeverity.WARNING
+            findings.append(
+                Finding(
+                    severity=severity,
+                    stage="STRUCTURAL",
+                    message=f"{check_name} — FAILED",
+                )
+            )
 
     score = round(sum(checks.values()) / len(checks), 3) if checks else 0.0
     return score, findings
 
 
-def score_cypher_quality(cypher: str) -> tuple[float, list[str]]:
-    """Deterministic Cypher setup quality checks."""
-    findings: list[str] = []
+def score_cypher_quality(cypher: str) -> tuple[float, list[Finding]]:
+    """Deterministic Cypher setup quality checks with severity levels."""
+    findings: list[Finding] = []
 
     if not cypher.strip():
-        findings.append("CYPHER: Setup script is empty")
+        findings.append(
+            Finding(
+                severity=FindingSeverity.ERROR,
+                stage="CYPHER",
+                message="Setup script is empty",
+            )
+        )
         return 0.0, findings
 
     from gibsgraph.training.validator import FORBIDDEN_KEYWORDS
 
     for keyword in FORBIDDEN_KEYWORDS:
         if keyword in cypher.upper():
-            findings.append(f"CYPHER: Contains dangerous keyword '{keyword}'")
+            findings.append(
+                Finding(
+                    severity=FindingSeverity.ERROR,
+                    stage="CYPHER",
+                    message=f"Contains dangerous keyword '{keyword}'",
+                )
+            )
             return 0.0, findings
 
     score = 0.0
     if "CREATE CONSTRAINT" in cypher.upper():
         score += 0.5
     else:
-        findings.append("CYPHER: No CREATE CONSTRAINT in setup")
+        findings.append(
+            Finding(
+                severity=FindingSeverity.WARNING,
+                stage="CYPHER",
+                message="No CREATE CONSTRAINT in setup",
+            )
+        )
 
     if "CREATE INDEX" in cypher.upper():
         score += 0.5
     else:
-        findings.append("CYPHER: No CREATE INDEX in setup")
+        findings.append(
+            Finding(
+                severity=FindingSeverity.WARNING,
+                stage="CYPHER",
+                message="No CREATE INDEX in setup",
+            )
+        )
 
     return score, findings
