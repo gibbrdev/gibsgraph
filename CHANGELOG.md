@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-02-26
+
+### Added
+- 92 curated expert records: cross-reference joins, aggregation chains, path queries, subqueries, APOC procedures, GDS algorithms, industry modeling patterns, error recovery practices, index guidance
+- 11 APOC/GDS procedure signatures (apoc.path.expandConfig, gds.pageRank.stream, gds.louvain.stream, etc.)
+- 8 industry modeling patterns: supply chain, social network, fraud detection, e-commerce, IT infrastructure, healthcare, content management, organizational hierarchy
+- 10 best practices: 5 error recovery (cartesian products, type mismatch, eager aggregation, missing UNWIND, relationship direction) + 5 index guidance (RANGE, TEXT, VECTOR, composite, when NOT to index)
+- Quality-tier filtering in `BundledExpertStore._load()` — skips `quality_tier: "low"` records
+- Expanded keyword search: `category`, `when_to_use`, and embedded `cypher_examples` now indexed
+
+### Fixed
+- Invalid nested `collect(collect(...))` in APOC collection example (two-step aggregation)
+- Null end node in `apoc.create.vRelationship` example (now passes actual Region node)
+- Deprecated `gds.graph.project.cypher` replaced with `gds.graph.filter` (GDS 2.5+)
+- Removed 5 duplicate modeling patterns and 1 duplicate best practice
+- Re-tagged ~88 irrelevant security/ops articles as `quality_tier: "low"`
+
+### Changed
+- Expert data: 920 records on disk, ~849 loaded after quality filtering (was 834/834)
+
+### Testing
+- 150 unit tests passing (was 224 in v0.3.2 count, now 150 excluding training property tests), 52% unit coverage
+- 44 expert-specific tests (was 36): quality-tier filtering, cross-reference search, GDS/APOC search, industry patterns, deduplication checks, cypher_examples extraction
+
 ## [0.3.2] - 2026-02-26
 
 ### Added

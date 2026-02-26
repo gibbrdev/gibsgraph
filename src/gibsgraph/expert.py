@@ -152,13 +152,26 @@ class BundledExpertStore:
                 if not line.strip():
                     continue
                 obj = json.loads(line)
+
+                # Skip low-quality entries
+                if obj.get("quality_tier") == "low":
+                    continue
+
                 name = obj.get("name") or obj.get("title") or obj.get("context") or ""
                 description = obj.get("description") or ""
                 cypher = obj.get("cypher") or ""
                 signature = obj.get("signature") or ""
+                category = obj.get("category") or ""
+                when_to_use = obj.get("when_to_use") or ""
+
+                # Include embedded cypher examples from patterns/practices
+                if not cypher:
+                    embedded = obj.get("cypher_examples", [])
+                    if embedded:
+                        cypher = "\n".join(embedded[:2])
 
                 # Build searchable tokens from all text fields
-                searchable = f"{name} {description} {cypher} {signature}"
+                searchable = f"{name} {description} {cypher} {signature} {category} {when_to_use}"
                 tokens = _tokenize(searchable)
 
                 records.append(

@@ -332,7 +332,9 @@ class TestBundledExpertStore:
     def test_loads_records(self):
         store = BundledExpertStore()
         records = store._load()
-        assert len(records) > 100  # Should have hundreds of records
+        # 920 on disk, ~810 after quality_tier filtering
+        assert len(records) > 700
+        assert len(records) < 1000
 
     def test_lazy_load_caches(self):
         store = BundledExpertStore()
@@ -382,3 +384,55 @@ class TestBundledExpertStore:
                 "ModelingPattern",
                 "BestPractice",
             }
+
+    def test_low_quality_tier_excluded(self):
+        store = BundledExpertStore()
+        records = store._load()
+        # Total on disk is 920, loaded should be less due to quality_tier filtering
+        assert len(records) < 920
+
+    def test_search_cross_reference_pattern(self):
+        store = BundledExpertStore()
+        result = store.search("actors who worked together movies")
+        assert len(result.hits) > 0
+        assert any(h.label == "CypherExample" for h in result.hits)
+
+    def test_search_gds_algorithm(self):
+        store = BundledExpertStore()
+        result = store.search("PageRank community detection")
+        assert len(result.hits) > 0
+
+    def test_search_apoc_path(self):
+        store = BundledExpertStore()
+        result = store.search("apoc path expand")
+        assert len(result.hits) > 0
+
+    def test_search_industry_pattern(self):
+        store = BundledExpertStore()
+        result = store.search("fraud detection transaction account")
+        assert len(result.hits) > 0
+        assert any(h.label == "ModelingPattern" for h in result.hits)
+
+    def test_no_duplicate_modeling_patterns(self):
+        store = BundledExpertStore()
+        records = store._load()
+        pattern_names = [r.name for r in records if r.label == "ModelingPattern"]
+        assert len(pattern_names) == len(set(pattern_names)), "Duplicate modeling pattern names"
+
+    def test_no_duplicate_best_practices(self):
+        store = BundledExpertStore()
+        records = store._load()
+        bp_names = [r.name for r in records if r.label == "BestPractice"]
+        assert len(bp_names) == len(set(bp_names)), "Duplicate best practice titles"
+
+    def test_cypher_examples_extracted_into_cypher_field(self):
+        """Records with cypher_examples but no cypher get examples extracted."""
+        store = BundledExpertStore()
+        records = store._load()
+        # Find records that are patterns/practices (which can have cypher_examples)
+        patterns_with_cypher = [
+            r for r in records if r.label in ("ModelingPattern", "BestPractice") and r.cypher
+        ]
+        assert len(patterns_with_cypher) > 0, "No patterns/practices have extracted cypher"
+        for rec in patterns_with_cypher:
+            assert len(rec.cypher.strip()) > 0

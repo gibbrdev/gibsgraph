@@ -17,11 +17,11 @@ verify what was queried.
 
 ---
 
-## What it does (v0.3.2)
+## What it does (v0.3.3)
 
 - **Natural language queries** — ask anything about your Neo4j graph
-- **Expert knowledge graph** — 715 nodes: 36 clauses, 122 functions, 383 examples, 309 best practices
-- **Bundled expert data** — works out of the box without loading data into Neo4j first
+- **Expert knowledge graph** — 920 records: 36 clauses, 133 functions, 446 examples, 23 modeling patterns, 318 best practices
+- **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~849 records)
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
 - **Dual retrieval** — vector search (when index exists) with text-to-Cypher fallback
@@ -134,7 +134,7 @@ Neo4j Knowledge Graph
 
 ## Testing
 
-224 unit tests, 79% coverage.
+150 unit tests, 52% coverage.
 
 ```bash
 pytest                          # All tests

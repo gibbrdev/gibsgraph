@@ -34,11 +34,11 @@ Every production graph from real users → training data
 GNN retrained periodically
 ```
 
-## Current state: v0.3.2
+## Current state: v0.3.3
 
-Shipped: `g.ask()` works, expert knowledge graph (715 nodes), bundled JSONL fallback,
-4-stage validation suite, 4 LLM providers (OpenAI, Anthropic, Mistral, xAI/Grok),
-224 tests at 79% coverage.
+Shipped: `g.ask()` works, expert knowledge graph (920 records, 849 after quality filtering),
+bundled JSONL fallback with quality-tier filtering, 4-stage validation suite,
+4 LLM providers (OpenAI, Anthropic, Mistral, xAI/Grok), 150 tests.
 Next: `g.ingest()`, PCST subgraph pruning, use case generation.
 
 ## Project overview
