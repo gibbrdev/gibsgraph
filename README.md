@@ -17,9 +17,10 @@ verify what was queried.
 
 ---
 
-## What it does (v0.3.3)
+## What it does (v0.3.4)
 
 - **Natural language queries** — ask anything about your Neo4j graph
+- **Text-to-graph ingestion** — `g.ingest("any text")` extracts entities and relationships into Neo4j automatically
 - **Expert knowledge graph** — 920 records: 36 clauses, 133 functions, 446 examples, 23 modeling patterns, 318 best practices
 - **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~849 records)
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
@@ -33,7 +34,6 @@ verify what was queried.
 
 ### Planned (not yet implemented)
 
-- Text-to-graph ingestion (`g.ingest()`)
 - G-Retriever GNN reasoning
 - PCST subgraph pruning
 
@@ -59,6 +59,11 @@ print(result.confidence)   # 0.0-1.0
 print(result.visualization) # Mermaid diagram string
 
 g.close()  # or use: with Graph(...) as g:
+
+# Ingest text into your graph
+g = Graph("bolt://localhost:7687", password="your-password", read_only=False)
+g.ingest("Apple acquired Beats Electronics for $3 billion in 2014.", source="news")
+g.close()
 ```
 
 ---
@@ -115,7 +120,7 @@ LangGraph Agent (agent.py)
     +-- training/      <- 4-stage validation (syntactic/structural/semantic/domain)
     +-- expert.py      <- ExpertStore + BundledExpertStore (JSONL fallback)
     +-- data/          <- Bundled expert JSONL (clauses, functions, examples, patterns, practices)
-    +-- kg_builder/    <- Text to Neo4j (planned)
+    +-- kg_builder/    <- Text to Neo4j via SimpleKGPipeline
     +-- gnn/           <- G-Retriever inference (planned)
     |
     v

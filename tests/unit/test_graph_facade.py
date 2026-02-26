@@ -236,3 +236,29 @@ def test_graph_close_without_agent():
     with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
         g = Graph("bolt://localhost:7687", password="testpw")
         g.close()  # Should not raise
+
+
+# --- Graph.ingest() ---
+
+
+def test_graph_ingest_delegates():
+    """Graph.ingest() delegates to KGBuilder and wraps result with source."""
+    from gibsgraph.kg_builder.builder import IngestResult as BuilderIngestResult
+
+    mock_agent = MagicMock()
+    mock_agent.kg_builder.ingest.return_value = BuilderIngestResult(
+        nodes_created=5, relationships_created=3, chunks_processed=1
+    )
+
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw", read_only=False)
+        g._agent = mock_agent
+
+        result = g.ingest("Apple acquired Beats.", source="test")
+
+    assert isinstance(result, IngestResult)
+    assert result.source == "test"
+    assert result.nodes_created == 5
+    assert result.relationships_created == 3
+    assert result.chunks_processed == 1
+    mock_agent.kg_builder.ingest.assert_called_once_with("Apple acquired Beats.", source="test")

@@ -13,7 +13,7 @@ from rich.text import Text
 log = structlog.get_logger(__name__)
 console = Console()
 
-_VERSION = "0.1.1"
+_VERSION = "0.3.4"
 
 
 def main() -> None:

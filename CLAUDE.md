@@ -34,12 +34,13 @@ Every production graph from real users → training data
 GNN retrained periodically
 ```
 
-## Current state: v0.3.3
+## Current state: v0.3.4
 
-Shipped: `g.ask()` works, expert knowledge graph (920 records, 849 after quality filtering),
+Shipped: `g.ask()` works, `g.ingest()` works (text-to-graph via neo4j-graphrag SimpleKGPipeline),
+expert knowledge graph (920 records, 849 after quality filtering),
 bundled JSONL fallback with quality-tier filtering, 4-stage validation suite,
-4 LLM providers (OpenAI, Anthropic, Mistral, xAI/Grok), 150 tests.
-Next: `g.ingest()`, PCST subgraph pruning, use case generation.
+4 LLM providers (OpenAI, Anthropic, Mistral, xAI/Grok), 162 tests.
+Next: PCST subgraph pruning, use case generation.
 
 ## Project overview
 
@@ -141,5 +142,4 @@ docker compose up
 ## Roadmap stubs
 
 Some features are planned but not yet implemented. These raise `NotImplementedError`:
-- `kg_builder/builder.py` → `ingest()` (pending neo4j-graphrag SimpleKGPipeline)
 - `gnn/g_retriever.py` → `predict()` (pending model weights)
