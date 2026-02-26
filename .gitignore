@@ -35,6 +35,7 @@ data/processed/
 
 # Internal specs and design docs (not for public repo)
 docs/specs/
+docs/GIBSGRAPH_EXPLAINED.md
 
 # Testing / coverage
 .coverage
