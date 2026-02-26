@@ -17,10 +17,11 @@ verify what was queried.
 
 ---
 
-## What it does (v0.3.1)
+## What it does (v0.3.2)
 
 - **Natural language queries** — ask anything about your Neo4j graph
 - **Expert knowledge graph** — 715 nodes: 36 clauses, 122 functions, 383 examples, 309 best practices
+- **Bundled expert data** — works out of the box without loading data into Neo4j first
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
 - **Dual retrieval** — vector search (when index exists) with text-to-Cypher fallback
@@ -112,7 +113,8 @@ LangGraph Agent (agent.py)
     +-- retrieval/     <- Auto schema discovery + text-to-Cypher + vector search
     +-- tools/         <- Cypher validator, Mermaid visualizer
     +-- training/      <- 4-stage validation (syntactic/structural/semantic/domain)
-    +-- expert.py      <- ExpertStore — 715 nodes, vector + fulltext indexes
+    +-- expert.py      <- ExpertStore + BundledExpertStore (JSONL fallback)
+    +-- data/          <- Bundled expert JSONL (clauses, functions, examples, patterns, practices)
     +-- kg_builder/    <- Text to Neo4j (planned)
     +-- gnn/           <- G-Retriever inference (planned)
     |
@@ -132,7 +134,7 @@ Neo4j Knowledge Graph
 
 ## Testing
 
-216 unit tests, 78% coverage.
+224 unit tests, 79% coverage.
 
 ```bash
 pytest                          # All tests

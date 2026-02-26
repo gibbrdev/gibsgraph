@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-02-26
+
+### Added
+- Bundled expert data in package — 5 JSONL files (~750K) ship with `pip install gibsgraph`
+- `BundledExpertStore` — keyword-based fallback when Neo4j expert index is unavailable
+- Expert knowledge works out of the box without loading data into Neo4j first
+- `src/gibsgraph/data/` package: cypher_clauses, cypher_functions, cypher_examples, modeling_patterns, best_practices
+
+### Changed
+- `ExpertStore.search()` falls back to bundled JSONL instead of returning empty when Neo4j unavailable
+- `ExpertStore.search()` falls back to bundled JSONL on Neo4j query exceptions (was returning empty)
+
+### Testing
+- 224 unit tests passing (was 216), 79% coverage
+- 15 new tests: `BundledExpertStore`, bundled data file validation, tokenizer, fallback wiring
+
 ## [0.3.1] - 2026-02-26
 
 ### Added
@@ -159,7 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/` — usage examples (regulatory KG)
 - `.github/` — CI workflows, issue templates, dependabot
 
-[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gibbrdev/gibsgraph/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gibbrdev/gibsgraph/compare/v0.1.1...v0.2.0

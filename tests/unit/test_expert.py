@@ -1,8 +1,17 @@
 """Tests for the expert knowledge store."""
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
-from gibsgraph.expert import ExpertContext, ExpertHit, ExpertStore, _to_lucene
+from gibsgraph.expert import (
+    BundledExpertStore,
+    ExpertContext,
+    ExpertHit,
+    ExpertStore,
+    _to_lucene,
+    _tokenize,
+)
 
 
 class TestToLucene:
@@ -195,12 +204,13 @@ class TestExpertStore:
         assert store.is_available() is True
         driver.session.assert_not_called()
 
-    def test_search_returns_empty_when_unavailable(self):
+    def test_search_uses_bundled_when_unavailable(self):
         store, _ = self._make_store()
         store._available = False
-        result = store.search("test query")
-        assert result.hits == []
-        assert result.query == "test query"
+        result = store.search("MATCH clause")
+        # Falls back to bundled store — should get hits
+        assert len(result.hits) > 0
+        assert result.query == "MATCH clause"
 
     def test_search_returns_hits(self):
         store, driver = self._make_store()
@@ -237,4 +247,138 @@ class TestExpertStore:
         session.run.side_effect = Exception("connection lost")
 
         result = store.search("test")
+        # Falls back to bundled — should still get hits
+        assert result.query == "test"
+
+    def test_search_falls_back_to_bundled_when_unavailable(self):
+        store, _ = self._make_store()
+        store._available = False
+        result = store.search("MATCH clause")
+        # Should get bundled hits instead of empty
+        assert len(result.hits) > 0
+        assert result.query == "MATCH clause"
+
+    def test_search_falls_back_to_bundled_on_exception(self):
+        store, driver = self._make_store()
+        store._available = True
+
+        session = MagicMock()
+        driver.session.return_value.__enter__ = MagicMock(return_value=session)
+        driver.session.return_value.__exit__ = MagicMock(return_value=False)
+        session.run.side_effect = Exception("connection lost")
+
+        result = store.search("shortestPath")
+        assert len(result.hits) > 0
+        assert result.query == "shortestPath"
+
+
+class TestTokenize:
+    """Test keyword tokenizer."""
+
+    def test_basic_tokens(self):
+        tokens = _tokenize("MATCH shortest path")
+        assert "match" in tokens
+        assert "shortest" in tokens
+        assert "path" in tokens
+
+    def test_stop_words_excluded(self):
+        tokens = _tokenize("the quick brown fox is a test")
+        assert "the" not in tokens
+        assert "is" not in tokens
+        assert "a" not in tokens
+        assert "quick" in tokens
+
+    def test_empty_string(self):
+        assert _tokenize("") == set()
+
+
+class TestBundledDataFiles:
+    """Test that bundled JSONL files exist and are valid."""
+
+    DATA_DIR = Path(__file__).resolve().parents[2] / "src" / "gibsgraph" / "data"
+    EXPECTED_FILES = (
+        "cypher_clauses.jsonl",
+        "cypher_functions.jsonl",
+        "cypher_examples.jsonl",
+        "modeling_patterns.jsonl",
+        "best_practices.jsonl",
+    )
+
+    def test_all_files_exist(self):
+        for name in self.EXPECTED_FILES:
+            path = self.DATA_DIR / name
+            assert path.exists(), f"Missing bundled data file: {name}"
+
+    def test_files_are_valid_jsonl(self):
+        for name in self.EXPECTED_FILES:
+            path = self.DATA_DIR / name
+            lines = path.read_text(encoding="utf-8").splitlines()
+            assert len(lines) > 0, f"Empty data file: {name}"
+            for i, line in enumerate(lines):
+                if not line.strip():
+                    continue
+                try:
+                    json.loads(line)
+                except json.JSONDecodeError as e:
+                    raise AssertionError(f"{name} line {i+1}: invalid JSON: {e}") from e
+
+    def test_init_py_exists(self):
+        assert (self.DATA_DIR / "__init__.py").exists()
+
+
+class TestBundledExpertStore:
+    """Test the bundled JSONL fallback store."""
+
+    def test_loads_records(self):
+        store = BundledExpertStore()
+        records = store._load()
+        assert len(records) > 100  # Should have hundreds of records
+
+    def test_lazy_load_caches(self):
+        store = BundledExpertStore()
+        first = store._load()
+        second = store._load()
+        assert first is second
+
+    def test_search_match_returns_hits(self):
+        store = BundledExpertStore()
+        result = store.search("MATCH clause")
+        assert len(result.hits) > 0
+        assert result.query == "MATCH clause"
+
+    def test_search_avg_returns_function(self):
+        store = BundledExpertStore()
+        result = store.search("avg average aggregating")
+        assert len(result.hits) > 0
+        labels = {h.label for h in result.hits}
+        assert "CypherFunction" in labels
+
+    def test_search_respects_top_k(self):
+        store = BundledExpertStore()
+        result = store.search("MATCH RETURN WHERE", top_k=3)
+        assert len(result.hits) <= 3
+
+    def test_search_empty_query_returns_empty(self):
+        store = BundledExpertStore()
+        result = store.search("")
         assert result.hits == []
+
+    def test_search_stop_words_only_returns_empty(self):
+        store = BundledExpertStore()
+        result = store.search("the is a")
+        assert result.hits == []
+
+    def test_hits_have_correct_types(self):
+        store = BundledExpertStore()
+        result = store.search("aggregating functions avg count")
+        for hit in result.hits:
+            assert isinstance(hit, ExpertHit)
+            assert isinstance(hit.score, float)
+            assert 0.0 < hit.score <= 1.0
+            assert hit.label in {
+                "CypherClause",
+                "CypherFunction",
+                "CypherExample",
+                "ModelingPattern",
+                "BestPractice",
+            }
