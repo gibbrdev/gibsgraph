@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-02-27
+
+### Added
+- PCST subgraph pruning — prunes vector-retrieved neighbourhoods to the most query-relevant connected subset via Prize-Collecting Steiner Tree algorithm
+- 3 new settings: `PCST_ENABLED` (default off), `PCST_MAX_NODES` (default 20), `PCST_EDGE_COST` (default 0.1)
+- Standalone `pcst_pruner` module — no Neo4j/LLM dependency, receives pre-computed embeddings
+- Graceful degradation: warns and skips if `pcst-fast` not installed (requires `gibsgraph[gnn]`)
+
+### Fixed
+- Vector-path nodes now include `_id` and `_labels` in `_fetch_neighbourhood` (were stripped by `_clean_props`)
+
+### Testing
+- 281 unit tests passing (was 244), 80% coverage, `pcst_pruner.py` at 100%
+- 35 new tests: `node_text` (8), `_cosine_similarity` (6), `compute_node_prizes` (5), `pcst_prune` short-circuits (4), `pcst_prune` behavior (10), `_pcst_available` (2), PCST config (2)
+- Realistic graph topologies: two-cluster with bridge, hub-spoke, parallel edges, self-loops, dangling edges
+- Argument capture tests verify pcst_fast receives correct edge arrays, prizes, and costs
+- Prize boosting test confirms top-K amplification without affecting noise nodes
+
 ## [0.3.4] - 2026-02-26
 
 ### Added
@@ -211,7 +229,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/` — usage examples (regulatory KG)
 - `.github/` — CI workflows, issue templates, dependabot
 
-[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.1...v0.3.2

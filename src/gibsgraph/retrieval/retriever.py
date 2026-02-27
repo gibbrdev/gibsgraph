@@ -307,6 +307,10 @@ class GraphRetriever:
             )
 
         subgraph = self._fetch_neighbourhood(node_ids=candidate_ids, limit=neighbourhood_limit)
+
+        if self.settings.pcst_enabled:
+            subgraph = self._pcst_prune(subgraph, query_embedding=embedding)
+
         context = self._serialize_context(subgraph)
 
         return RetrievalResult(
@@ -529,7 +533,10 @@ class GraphRetriever:
         for r in records:
             for key in ("n", "m"):
                 n = r[key]
-                nodes[n.element_id] = self._clean_props(dict(n))
+                node_dict = self._clean_props(dict(n))
+                node_dict["_id"] = n.element_id
+                node_dict["_labels"] = list(n.labels)
+                nodes[n.element_id] = node_dict
             edges.append(
                 {
                     "type": r["r"].type,
@@ -574,6 +581,33 @@ class GraphRetriever:
             for e in edges[:30]:
                 lines.append(f"  - ({e['start']})-[:{e['type']}]->({e['end']})")
         return "\n".join(lines) if lines else "No results found."
+
+    def _pcst_prune(
+        self,
+        subgraph: dict[str, Any],
+        *,
+        query_embedding: list[float],
+    ) -> dict[str, Any]:
+        """Prune subgraph to most query-relevant subset via PCST."""
+        from gibsgraph.retrieval.pcst_pruner import _pcst_available, node_text, pcst_prune
+
+        if not _pcst_available():
+            return subgraph
+
+        nodes = subgraph.get("nodes", [])
+        if not nodes:
+            return subgraph
+
+        texts = [node_text(n) for n in nodes]
+        node_embeddings = [self._embed(t) for t in texts]
+
+        return pcst_prune(
+            subgraph,
+            node_embeddings,
+            query_embedding,
+            max_nodes=self.settings.pcst_max_nodes,
+            edge_cost=self.settings.pcst_edge_cost,
+        )
 
     def close(self) -> None:
         self._driver.close()

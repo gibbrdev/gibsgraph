@@ -25,14 +25,16 @@ It grows into a knowledge machine that gets smarter every time someone uses it.
 - Mermaid diagrams + Neo4j Bloom visualization
 - `pip install gibsgraph` on PyPI
 - Streamlit demo UI + Docker one-command setup
+- `g.ingest()` — text-to-graph ingestion via neo4j-graphrag SimpleKGPipeline (v0.3.4)
+- PCST subgraph pruning — prunes vector neighbourhoods to query-relevant subset (v0.3.5)
 
 ---
 
 ## v1.0 — Foundation
 **Theme: It works. It impresses.**
 
-- `g.ingest()` — text-to-graph ingestion via neo4j-graphrag SimpleKGPipeline
-- PCST subgraph pruning for precise, hallucination-free retrieval
+- ~~`g.ingest()` — text-to-graph ingestion via neo4j-graphrag SimpleKGPipeline~~ (v0.3.4)
+- ~~PCST subgraph pruning for precise, hallucination-free retrieval~~ (v0.3.5)
 - Use case generation per industry
 - Demo runs against gibs.dev regulatory graph
 

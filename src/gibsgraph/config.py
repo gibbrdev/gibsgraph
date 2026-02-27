@@ -116,6 +116,11 @@ class Settings(BaseSettings):
     # Security
     rate_limit_per_minute: int = Field(default=60, alias="RATE_LIMIT_PER_MINUTE")
 
+    # PCST subgraph pruning (requires gibsgraph[gnn])
+    pcst_enabled: bool = Field(default=False, alias="PCST_ENABLED")
+    pcst_max_nodes: int = Field(default=20, alias="PCST_MAX_NODES")
+    pcst_edge_cost: float = Field(default=0.1, alias="PCST_EDGE_COST")
+
     @field_validator("neo4j_uri")
     @classmethod
     def validate_neo4j_uri(cls, v: str) -> str:

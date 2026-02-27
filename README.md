@@ -17,7 +17,7 @@ verify what was queried.
 
 ---
 
-## What it does (v0.3.4)
+## What it does (v0.3.5)
 
 - **Natural language queries** — ask anything about your Neo4j graph
 - **Text-to-graph ingestion** — `g.ingest("any text")` extracts entities and relationships into Neo4j automatically
@@ -25,6 +25,7 @@ verify what was queried.
 - **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~849 records)
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
+- **PCST subgraph pruning** — prunes vector neighbourhoods to the most query-relevant subset (opt-in, requires `gibsgraph[gnn]`)
 - **Dual retrieval** — vector search (when index exists) with text-to-Cypher fallback
 - **Cypher self-healing** — if generated Cypher fails, the error is sent back to the LLM for correction
 - **Cypher transparency** — see exactly what was queried
@@ -35,7 +36,6 @@ verify what was queried.
 ### Planned (not yet implemented)
 
 - G-Retriever GNN reasoning
-- PCST subgraph pruning
 
 ---
 
@@ -92,7 +92,7 @@ Optional extras:
 
 ```bash
 pip install "gibsgraph[mistral]"  # Mistral LLM support
-pip install "gibsgraph[gnn]"      # G-Retriever GNN (needs GPU/CUDA)
+pip install "gibsgraph[gnn]"      # PCST pruning + G-Retriever GNN
 pip install "gibsgraph[ui]"       # Streamlit demo UI
 pip install "gibsgraph[full]"     # everything including dev tools
 ```
@@ -115,7 +115,7 @@ User Query
     |
     v
 LangGraph Agent (agent.py)
-    +-- retrieval/     <- Auto schema discovery + text-to-Cypher + vector search
+    +-- retrieval/     <- Auto schema discovery + text-to-Cypher + vector search + PCST pruning
     +-- tools/         <- Cypher validator, Mermaid visualizer
     +-- training/      <- 4-stage validation (syntactic/structural/semantic/domain)
     +-- expert.py      <- ExpertStore + BundledExpertStore (JSONL fallback)
@@ -139,7 +139,7 @@ Neo4j Knowledge Graph
 
 ## Testing
 
-150 unit tests, 52% coverage.
+281 unit tests, 80% coverage.
 
 ```bash
 pytest                          # All tests

@@ -94,3 +94,25 @@ def test_providers_order():
 def test_default_llm_model_matches_first_provider():
     s = Settings(NEO4J_PASSWORD="test")
     assert s.llm_model == PROVIDERS[0].default_model
+
+
+# --- PCST settings ---
+
+
+def test_pcst_defaults():
+    s = Settings(NEO4J_PASSWORD="test")
+    assert s.pcst_enabled is False
+    assert s.pcst_max_nodes == 20
+    assert s.pcst_edge_cost == 0.1
+
+
+def test_pcst_custom_values():
+    s = Settings(
+        NEO4J_PASSWORD="test",
+        PCST_ENABLED=True,
+        PCST_MAX_NODES=50,
+        PCST_EDGE_COST=0.25,
+    )
+    assert s.pcst_enabled is True
+    assert s.pcst_max_nodes == 50
+    assert s.pcst_edge_cost == 0.25
