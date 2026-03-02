@@ -1,0 +1,859 @@
+line,title,description,category,cypher_examples,source_file,authority_level,quality_tier,review_status,reviewer_notes
+1,Graph modeling tips,"In this guide, you find some helpful information to designing a data model for your domain.  Optimizing the model helps developers to maximize performance of the system and queries.",modeling,,modules\ROOT\pages\data-modeling\modeling-tips.adoc,1,medium,,
+2,Transition from NoSQL to graph database,This chapter explains how graph databases are related to other NoSQL databases and how they differ.,modeling,,modules\ROOT\pages\appendix\graphdb-concepts\graphdb-vs-nosql.adoc,1,medium,,
+3,Comparing relational to graph database,This page explores the conceptual differences between relational and graph database structures and data models.,modeling,,modules\ROOT\pages\appendix\graphdb-concepts\graphdb-vs-rdbms.adoc,1,medium,,
+4,A demonstration of causal cluster routing,The following will demonstrate how to use https://neo4j.com/docs/operations-manual/current/tools/cypher-shell/[cypher-shell] to get,cypher,"neo4j> call dbms.cluster.overview() yield addresses, role;
++ | neo4j> create (m:Person {id:123});
+No write operations are allowed directly on this database. Writes must pass through the leader. The role of this server is: FOLLOWER
+neo4j> :exit",articles\modules\ROOT\pages\a-demonstration-of-causal-cluster-routing.adoc,1,high,,
+5,A Demonstration of Cluster Size at Formation and Runtime,*Causal Clustering Minimum Core Size At Formation*,security,,articles\modules\ROOT\pages\a-demonstration-of-cluster-size-at-formation-and-runtime.adoc,1,low,,
+6,A demonstration of IntraCluster SSL Encryption,"This document provides a step-by-step demonstration of the process to deploy a Self-Signed SSL Certificate, to member",security,,articles\modules\ROOT\pages\a-demonstration-of-intracluster-ssl-encryption.adoc,1,low,,
+7,A light weight approach to validating network port connectivity,"If it becomes necessary to validate, particularly in a clustered environment whether",security,,articles\modules\ROOT\pages\a-light-weight-approach-to-validating-network-port-connectivity.adoc,1,low,,
+8,A lightweight approach to testing the Neo4j REST API with Authentication,This article will show examples of how to test the Neo4j REST API for,security,,articles\modules\ROOT\pages\a-lightweight-approach-to-testing-the-neo4j-rest-api-with-authentication.adoc,1,medium,,
+9,A method to calculate the size of an index in Neo4j.,"If the need arises to calculate the size of an index in Neo4j, for capacity planning purposes, there are two methods available:",cypher,,articles\modules\ROOT\pages\a-method-to-calculate-index-size.adoc,1,medium,,
+10,A method to replicate a Causal Cluster to new hardware with minimum downtime,If the opportunity arises such that you are in need of replicating your existing,security,"neo4j> call dbms.cluster.overview
++",articles\modules\ROOT\pages\a-method-to-replicate-a-causal-cluster-to-new-hardware-with-minimum-downtime.adoc,1,low,,
+11,A note on OPTIONAL MATCHes,"An `OPTIONAL MATCH` matches patterns against your graph database, just like a `MATCH` does. The difference is that if no matches are found, `OPTIONAL MATCH` will use a null for missing parts of the pa",cypher,"OPTIONAL MATCH (actor:Actor)-[:ACTED_IN]->(:Movie)<-[:DIRECTED]-(director:Director {uuid:'fd787f45-df1a-4f8b-b4a9-ab7b90fefae4'}) 
+OPTIONAL MATCH (director)-[:HAS_STUDIO*2]->(:Studio)-[:HAS_ACTOR]->(actor)-[:HAS_PROFILE]->(profile:Profile) 
+WHERE profile.type IN [""Drama"", ""Action""] 
+MERGE (director)-[:HAS]->(actor) 
+ON CREATE SET profile.uuid = apoc.create.uuid(), profile.lastTimeReported = '2018-12-15T23:13:22.274', profile.reportingState = 'Active' 
+ON MATCH SET profile.lastTimeReported = '2018-07-15T23:30:00.000', profile.reportingState = 'Active' 
+RETURN COUNT(profile) as updatedCount | OPTIONAL MATCH (a)
+MERGE (a)-[:X]->()",articles\modules\ROOT\pages\a-note-on-optional-matches.adoc,1,high,,
+12,A significant change in apoc.periodic.iterate() in apoc 4.0,"In 3.5 an entity (node, relationship, path) could be acquired in one transaction and safely reused by another.",cypher,"CALL apoc.periodic.iterate('MATCH (:Account)-[r:ASSOCIATED_WITH]->() RETURN r',
+    'CALL apoc.do.case(.....) YIELD value RETURN value',
+     {batchSize: 10000, parallel: false, iterateList: true}); | CALL apoc.periodic.iterate('MATCH (:Account)-[r:ASSOCIATED_WITH]->() RETURN id(r) as id',
+    'MATCH ()-[r]->() WHERE id(r)=id CALL apoc.do.case(.....) YIELD value RETURN value', 
+    {batchSize: 10000, parallel: false, iterateList: true});",articles\modules\ROOT\pages\a-significant-change-in-apoc-periodic-iterate-in-apoc-4-0.adoc,1,high,,
+13,Achieving longestPath Using Cypher,"While Cypher is optimized for finding the shortest path between two nodes, with such functionality as `shortestPath()`,",cypher,"MATCH p=(parent:Root)-[r:HAS_CHILD*1..10]->(child:Node)
+RETURN p | MATCH p=(parent:Root)-[:HAS_CHILD*1..10]->(child:Node)
+WHERE NOT (child)-[:HAS_CHILD]->()
+RETURN p",articles\modules\ROOT\pages\achieving-longestpath-using-cypher.adoc,1,high,,
+14,Add a Neo4j instance to a running embedded HA application,There are situations when we would like to use the Neo4j Browser to access an embedded HA cluster.,security,,articles\modules\ROOT\pages\add-a-neo4j-instance-to-an-embedded-ha-application.adoc,1,low,,
+15,All shortest paths between a set of nodes,"Consider a number of arbitrary nodes,  A,B,C,D,E,F,.....",cypher,"MATCH (n:Entity) where n.name IN {names}
+WITH collect(n) as nodes
+UNWIND nodes as n
+UNWIND nodes as m
+WITH * WHERE id(n) < id(m)
+MATCH path = allShortestPaths( (n)-[*..4]-(m) )
+RETURN path",articles\modules\ROOT\pages\all-shortest-paths-between-set-of-nodes.adoc,1,high,,
+16,Alternatives to UNION queries,"While UNIONs can be useful for certain cases, they can often be avoided completely with small changes to the query.",cypher,"MATCH (:Person {name:'Keanu Reeves'})-[:ACTED_IN]->(movie:Movie)<-[:ACTED_IN]-(coactor)
+RETURN movie, coactor | MATCH (:Person {name:'Keanu Reeves'})-[:ACTED_IN]->(movie:Movie)<-[:ACTED_IN]-(coactor)
+RETURN movie, coactor
+UNION
+MATCH (p:Person {name:'Keanu Reeves'})-[:ACTED_IN]->(movie:Movie)
+RETURN movie, p as coactor",articles\modules\ROOT\pages\alternatives-to-union-queries.adoc,1,high,,
+17,Using Amazon CloudWatch to monitor Neo4j logs,This article describes how to set up Amazon http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/WhatIsCloudWatch.html[CloudWatch].,security,,articles\modules\ROOT\pages\amazon-cloudwatch-configuration-for-neo4j-logs.adoc,1,medium,,
+18,An approach to parsing the query.log,When one has enabled query.log through Neo4j Enterprise parameter,cypher,,articles\modules\ROOT\pages\an-approach-to-parsing-the-query-log.adoc,1,medium,,
+19,An example of neo4j-import steps in a Causal Cluster environment,The following steps are provided to describe how to use neo4j-import in a Causal Cluster environment and was run from an,security,create (n:Tester {id:105});,articles\modules\ROOT\pages\an-example-of-neo4j-import-steps-in-a-causal-cluster-environment.adoc,1,low,,
+20,An explanation of the E_COUNT_EXCEEDED WARNing message in Neo4j's debug.log.,The document aims to explain the `E_COUNT_EXCEEDED` WARNing messages that Neo4j can write to its debug.log.,performance,,articles\modules\ROOT\pages\an-explanation-of-e-count-exceeded.adoc,1,medium,,
+21,An explanation of entries in query.log,This document aims to provide descriptions of components of the query.log logfile located at $NEO4J_HOME/logs. Note that the,cypher,"match (n:Person {name:'Tom Hanks'})-[:ACTED_IN]->(n1:Movie)<-[:DIRECTED]-(n2:Person {name:""Tom Hanks""}) return n1.title",articles\modules\ROOT\pages\an-explanation-of-entries-in-query-log.adoc,1,high,,
+22,An overview of the system database,Neo4j 4.0 and higher versions support the management of multiple databases within the same DBMS. All these databases are controlled through a special database called the `system` database.,security,,articles\modules\ROOT\pages\an-overview-of-the-system-database.adoc,1,low,,
+23,Analyzing a java heap dump,The purpose of this article is to help you go through the acquired heapdump with Eclipse MAT.,performance,,articles\modules\ROOT\pages\analyzing-a-java-heap-dump.adoc,1,medium,,
+24,Are my cluster transactions/messages encrypted.,"For all versions prior to 3.3, there is no encryption done specifically on the contents being transferred.",security,,articles\modules\ROOT\pages\are-my-cluster-transactions-messages-encrypted.adoc,1,low,,
+25,Assign or restrict CPU cores to Neo4j process,"Operating system run performance-critical applications on multi-core processors using something called ""processor affinity""",performance,,articles\modules\ROOT\pages\assign-or-restrict-cpu-cores-to-neo4j-process.adoc,1,medium,,
+26,Backup Failed. Unexpected error: Base directory for SSL policy with name 'default' does not exist.,This article is based on a defect report with a suggested workaround until a fix becomes available.,security,,articles\modules\ROOT\pages\backup-failed-unexpected-error-base-directory-for-ssl-policy-with-name-default-does-not-exist.adoc,1,low,,
+27,Bloom Compatibility with Neo4j 5.0,Neo4j Bloom makes use of database procedures for identifying indexes and constraints that have been deprecated and will be unavailable in Neo4j 5.0. These changes have been implemented to ensure a hig,performance,,articles\modules\ROOT\pages\bloom-compatibility-neo4j50.adoc,1,medium,,
+28,Bloom Logging System,"Starting with Bloom 2.1, it's possible to extract logs at various levels of detail from the web browser's developer console when running in Chrome, Firefox or Edge. Please consult documentation for yo",security,,articles\modules\ROOT\pages\bloom-logging-system.adoc,1,medium,,
+29,Throttling Bolt Requests,"When large amounts of data are sent between a Neo4j database and a client (typically large query results, from server to client), there are a few hidden throttling mechanisms that may come into play.",cypher,,articles\modules\ROOT\pages\bolt-throttling.adoc,1,medium,,
+30,Can I use NFS as my filesystem or datastore storage?,The short answer is no.,performance,,articles\modules\ROOT\pages\can-i-use-nfs-as-my-filesystem-or-datastore-storage.adoc,1,low,,
+31,Capacity Planning Example,Here is a back of the napkin example of capacity planning for a Neo4j workload for the following list of requirements:,security,,articles\modules\ROOT\pages\capacity-planning-example.adoc,1,medium,,
+32,Causal Cluster FAQ for heavy workloads,*Lagging of follower instances and what causes it?*,security,,articles\modules\ROOT\pages\causal-cluster-faq-for-heavy-workloads.adoc,1,low,,
+33,Change logging levels in Neo4j Embedded,"In order to change the default logging levels in a Neo4j embedded instance, you must edit/define the configuration file, which is XML.",security,,articles\modules\ROOT\pages\change-logging-levels-in-neo4j-embedded.adoc,1,medium,,
+34,Changes to metrics.csv reporting from 2.x to 3.x,Metrics reporting is an Enterprise feature which upon enablement allows for the creation of .csv files at a specified interval to record key metrics.,security,,articles\modules\ROOT\pages\changes-to-metrics-csv-reporting-from-2-x-to-3-x.adoc,1,low,,
+35,Retired: Changing your Garbage Collection Method to G1,This is already the default Garbage Collector in Neo4j 2.3+.,performance,,articles\modules\ROOT\pages\changing-your-garbage-collection-method-to-g1.adoc,1,medium,,
+36,Checkpointing and Log Pruning interactions,Checkpointing is the process of flushing all pending page updates from the page cache to the store files. This is necessary for ensuring that the number of transactions that are in need of being repla,performance,,articles\modules\ROOT\pages\checkpointing-and-log-pruning-interactions.adoc,1,medium,,
+37,Cluster: org.neo4j.kernel.impl.transaction.log.NoSuchTransactionException: Unable to find transaction 1 in any of my logical logs: Couldn't find any log containing 1,"When operating a https://neo4j.com/docs/operations-manual/current/clustering/causal-clustering/setup-new-cluster/#unbind-instance-from-cluster[causal cluster^], if ""the store"" (`data/databases/graph.d",security,,articles\modules\ROOT\pages\cluster-unable-to-find-transaction.adoc,1,low,,
+38,Example of using the Command Expansion on Windows,"The **Command Expansion** feature, introduced in **Neo4j 4.2**, is a security feature to avoid having configuration parameters being written in the `neo4j.conf` file in plain text.",security,"CALL dbms.listConfig() YIELD name, value WHERE name = 'dbms.max_databases' RETURN value",articles\modules\ROOT\pages\command-expansion-example-on-windows.adoc,1,low,,
+39,Comparing HA and Causal Clusters,"The legacy HA cluster mode has been deprecated as of Neo4j version 3.5, and will be totally removed from the product in version 4.0, with 4.0 expected to be released near the end of 2019.",security,,articles\modules\ROOT\pages\comparing-ha-vs-causal-clusters.adoc,1,low,,
+40,Comparing relationship properties within a path,"You want to compare relationship-properties of a path, either by a global value or parameter, or with each other within a path.",cypher,(:Person {person_id:'123'})-[:FRIEND {date:'1972-01-01'}]->(m:Person {person_id:'456'}) | CREATE CONSTRAINT ON (p:Person) ASSERT p.person_id IS UNIQUE,articles\modules\ROOT\pages\comparing-relationship-properties-within-a-path.adoc,1,high,,
+41,Conditional Cypher Execution,"At some point you're going to write a Cypher query requiring some conditional logic, where you want different Cypher statements executed depending on the case.",cypher,"MATCH (bruce:Person {name:'Bruce Wayne'})
+CALL {
+    WITH bruce
+    WITH bruce
+    WHERE bruce.isOrphan
+    MERGE (batman:Hero {name:'Batman'})
+    CREATE (bruce)-[:SuperheroPersona]->(batman)
+    WITH count(batman) as count
+    RETURN count = 1 as isBatman
+}
+RETURN isBatman | WITH count(batman) as count
+    RETURN count = 1 as isBatman",articles\modules\ROOT\pages\conditional-cypher-execution.adoc,1,high,,
+42,Configure HAProxy to Send Write Requests to Leader Node Only,There are a few options regarding implementation of a proxy server to direct writes to a Master node and reads to the Slave nodes in a Neo4j cluster.,security,,articles\modules\ROOT\pages\configure-haproxy-to-send-write-requests-to-master-node-only.adoc,1,low,,
+43,Configure Neo4j to authenticate users from different OUs using the Active Directory attribute samAccountName,"Beginning with Neo4j version https://github.com/neo4j/neo4j/wiki/Neo4j-3.2-changelog#322[3.2.2], it is possible to authenticate using",security,,articles\modules\ROOT\pages\configure-neo4j-multiple-ous-using-active-directory-attribute-samaccountname.adoc,1,low,,
+44,Configuring Neo4j to operate on privileged ports,"In some environments, users are required to run Neo4j on ports lower than 1024 due to corporate policies. The following is a sample configuration showing how to configure Neo4j 3.5 and newer to listen",security,,articles\modules\ROOT\pages\configure-neo4j-operate-on-privileged-ports.adoc,1,low,,
+45,Configuring Remote JMX monitoring,"In order to enable JMX Remote monitoring, edit the  `neo4j.conf` file in Neo4j 3.1.x versions and uncomment the following lines:",security,,articles\modules\ROOT\pages\configuring-remote-jmx-monitoring.adoc,1,low,,
+46,Connecting via Bolt when using Tunnelling or NAT,"This article aims to provide a method to connect to the Neo4j database over bolt, via Neo4j browser where the bolt host is different",security,,articles\modules\ROOT\pages\connecting-bolt-when-using-tunnelling-or-nat.adoc,1,medium,,
+47,Consideration about routing tables on multi-data center deployments,Using the official Neo4j drivers means that you can take advantage of the full cluster routing capabilities of the drivers. This means,security,,articles\modules\ROOT\pages\consideration-about-routing-tables-on-multi-data-center-deployments.adoc,1,low,,
+48,Control number of file handles created per Lucene Index,"In the more recent Neo4j versions (3.4 onwards), the number of file handles opened by Neo4j may seem to increase compared with that in older versions.",performance,,articles\modules\ROOT\pages\control-number-of-file-handles-created-per-lucene-index.adoc,1,medium,,
+49,Launching Neo4j Desktop in Linux (Ubuntu & Debian) with an .appimage file,"NOTE: Neo4j installation on Linux using apt-get,",security,,articles\modules\ROOT\pages\convert-an-appimage-file-into-executable-on-linux-ubuntu-debian.adoc,1,low,,
+50,How do I resolve inconsistency problems on an instance of a cluster,"(if using HA (High Availability, please read `Leader` and `Follower` instead of `Master` and `Slave` respectively)",security,,articles\modules\ROOT\pages\copy-store-between-instances.adoc,1,low,,
+51,Creating and working with linked lists in Cypher,"At some point when working with a graph, you may want to create a linked list out of some nodes.",cypher,"// assume a, b, and c were previously matched and in scope
+CREATE (a)-[:REL]->(b)-[:REL]->(c) | MATCH (p:Person)
+WITH p
+ORDER BY p.name ASC
+LIMIT 5
+WITH collect(p) as persons
+CALL apoc.nodes.link(persons, 'KNOWS')
+RETURN persons",articles\modules\ROOT\pages\creating-and-working-with-linked-lists.adoc,1,high,,
+52,Creating and configuring database-local roles,"Neo4j 4.0 introduced advanced security features in the form of https://neo4j.com/docs/cypher-manual/current/access-control/[role-based access controls], much needed, especially with the introduction o",cypher,"CREATE ROLE db1_reader AS COPY OF reader;
+REVOKE GRANT ACCESS ON DATABASES * FROM db1_reader;
+GRANT ACCESS ON DATABASE db1 TO db1_reader;
+GRANT ROLE db1_reader TO user_a; | CREATE ROLE db2_accessor;
+GRANT ACCESS ON DATABASE db2 TO db2_accessor;
+GRANT ROLE db2_accessor TO user_a;",articles\modules\ROOT\pages\creating-database-local-roles.adoc,1,high,,
+53,Cross Product Cypher queries will not perform well,"Just like SQL, if you do not properly connect the parts of your query, it will result in a cross (cartesian) product, which is seldom what you want.",cypher,"MATCH (p:Person), (m:Movie)
+RETURN p, m;",articles\modules\ROOT\pages\cross-product-cypher-queries-will-not-perform-well.adoc,1,high,,
+54,Using Cypher how do I determine the version and edition of Neo4j,If you want to determine version and edition of the running Neo4j instance this can be accomplished via running the following cypher:,cypher,"call dbms.components() yield name, versions, edition unwind versions as version return name, version, edition;",articles\modules\ROOT\pages\cypher-to-determine-version-and-edition-of-neo4j.adoc,1,high,,
+55,Importing Data to Neo4j in the Cloud,"Loading data in a Neo4j instance that is in the cloud is very similar to running Neo4j using any other method. However, there are a few small things to look out for and keep in mind when importing dat",cypher,,articles\modules\ROOT\pages\data-import-for-cloud.adoc,1,medium,,
+56,Database Compaction in 4.0 using Neo4j-admin copy,This article demonstrates using the neo4j-admin copy tool to reclaim un-used space occupied by neo4j store files.,cypher,,articles\modules\ROOT\pages\database-compaction-in-40-using-neo4j-admin-copy.adoc,1,medium,,
+57,"Database was successfully initialized, but failed to start",Sometimes when the database does not start it could be something as simple as unnecessary characters in the neo4j.conf file. For example if you add space and/or tab characters to below setting:,security,,articles\modules\ROOT\pages\database-was-successfully-initialized-but-failed-to-start.adoc,1,low,,
+58,Debian: apt-get failing to update Neo4j,The common cause is an out of date gpg key.,security,,articles\modules\ROOT\pages\debian-apt-get-failing-to-update-neo4j.adoc,1,low,,
+59,Debian / Ubuntu: How to enforce a certain version of neo4j when using debian packages,If you want to run a specific version of Neo4j and install the software via a https://neo4j.com/docs/operations-manual/current/installation/linux/debian/#debian[debian repository^] you need to use a t,security,,articles\modules\ROOT\pages\debian-ubuntu-version-apt-pinning.adoc,1,low,,
+60,Deploying Neo4j on AWS Using CloudFormation,"This page describes how to use CloudFormation to deploy Neo4j clusters on AWS, using Virtual",security,,articles\modules\ROOT\pages\deploy-aws-cloudformation.adoc,1,low,,
+61,How to diagnose locking issues,Since Neo4j 3.4 it's possible to better understand locking issues caused by concurrent query. This KB article will not detail the basics,cypher,,articles\modules\ROOT\pages\diagnose-locking-issues.adoc,1,medium,,
+62,Diagnose storage performance issues,"Slow storage can affect Neo4j performance, therefore we recommend using Solid State Drives in the https://neo4j.com/docs/operations-manual/current/performance/disks-ram-and-other-tips/#performance-sto",performance,,articles\modules\ROOT\pages\diagnose-storage-performance-issues.adoc,1,medium,,
+63,Diagnosing network latency in a Causal Cluster using MTR,MTR is a simple ICMP based test combining ping and traceroute. The following demonstrates usage of the MTR trace tool to,security,,articles\modules\ROOT\pages\diagnosing-network-latency-in-a-causal-cluster-using-mtr.adoc,1,low,,
+64,Displaying Query CPU Utilization and Allocated Bytes in Query log,"In Neo4j 3.3 and prior versions, when query logging is enabled with the following configuration parameters:",cypher,,articles\modules\ROOT\pages\displaying-cpu-utilization-and-allocated-bytes-in-query-log.adoc,1,medium,,
+65,Neo4j Docker image cannot run on kubernetes as non root user,In Kubernetes (K8S) various levels of security can be set which apply cluster-wide to Pods running containers.,security,,articles\modules\ROOT\pages\docker-image-cannot-run-on-kubernetes-as-non-root-user.adoc,1,low,,
+66,"Docker ""Permission Denied"" Error","When a docker instance is started, one could get a permission denied error such as",security,,articles\modules\ROOT\pages\docker-permission-denied.adoc,1,low,,
+67,Dump the Contents of a Transaction Log,"If there is a need to look through the transaction logs, particularly to see if/when a node or relationship (or property) with a given ID was touched, you will need to dump the log using the `DumpLogi",modeling,,articles\modules\ROOT\pages\dump-the-contents-of-a-transaction-log.adoc,1,medium,,
+68,Embed neo4j-enterprise within your java application,The link:https://neo4j.com/docs/java-reference/3.5/[Neo4j Java Reference Documentation] generally describes how to embed Neo4j Community Edition within your Java application. If you are licensed for N,security,,articles\modules\ROOT\pages\embed-neo4j-enterprise-within-your-java-application.adoc,1,medium,,
+69,Enabling GC Logging,A garbage collection event is a complete pause of the java application (ie: neo4j-server).,performance,,articles\modules\ROOT\pages\enabling-gc-logging.adoc,1,medium,,
+70,Enabling TLSv1.2 with IBM JDK9,"Neo4j 3.4.0 only supports TLSv1.2 by default. IBM JDK9 uses the TLSv1 protocol by default. When attempting to run cypher-shell, users will be unable to connect to Neo4j.",cypher,,articles\modules\ROOT\pages\enabling-tlsv1-2-with-ibm-jdk9.adoc,1,medium,,
+71,Enabling Transaction Timeout Within Application,"There is a `dbms.transaction.timeout` global setting on Neo4j that can be set in `neo4j.conf` file so if any query from any user exceeds the timeout threshold specified, that query is terminated.",cypher,,articles\modules\ROOT\pages\enabling-transaction-timeout-within-application.adoc,1,medium,,
+72,Executing Neo4j ETL from an RDBMS database running on Docker,"Following provides some examples of importing a test csv data into Neo4j, using the Neo4j ETL tool's command line interface",security,,articles\modules\ROOT\pages\executing-neo4j-etl-from-an-rdbms-database-running-on-docker.adoc,1,low,,
+73,"Explanation of the ""consumed after"" message in query results","After successfully executing a query through the Neo4j Browser or cypher-shell, you may see a message formatted as follows accompanying the query results:",cypher,,articles\modules\ROOT\pages\explanation-of-consumed-after-message-in-query-results.adoc,1,medium,,
+74,"Explanation of data/log/console.log error of 'TLS certificate error occurred, unable to start server: Neither RSA, DSA nor EC worked...'",On `bin/neo4j start` the `data/log/console.log` may log an error similar to,security,,articles\modules\ROOT\pages\explanation-of-data-log-console-log-error-of-tls-certificate.adoc,1,low,,
+75,Explantion of debug.log message of Commits found after last checkpoint,When running backup for example,cypher,,articles\modules\ROOT\pages\explanation-of-debug-log-message-of-commits-found-after-last-check-point.adoc,1,low,,
+76,"Explanation of error ""Cannot merge node using null property value for""","When running a https://neo4j.com/docs/cypher-manual/current/clauses/merge/[MERGE], which is a combination of MATCH and/or CREATE one may",cypher,"load csv with headers from 'file:///test.csv' as row 
+merge (emp:Employee {id: row.id}) set emp.name=row.name, emp.employee_numer=row.employee_number; | load csv with headers from 'file:///test.csv' as row  with row where row.id is not null 
+merge (emp:Employee {id: row.id}) set emp.name=row.name, emp.employee_numer=row.employee_number;",articles\modules\ROOT\pages\explanation-of-error-cannot-merge-node-using-null-property-value.adoc,1,high,,
+77,"Explanation of error ""Database constraints have changed (txId=xxxxx) after this transaction (txId=yyyyy) started, which is not yet supported""","The following error, via `bin/neo4j-shell`:",security,,articles\modules\ROOT\pages\explanation-of-error-database-constraints-have-changed-txid-84-after-this-transaction-txid-81-started.adoc,1,low,,
+78,Explanation of Error: db fails to start with Caused by: org.neo4j.token.api.NonUniqueTokenException: The PropertyKey NamedToken,When attempting to start Neo4j and one is running a Neo4j 4.0.x release and where `x` is <=2 the following error may be,security,,articles\modules\ROOT\pages\explanation-of-error-db-fails-to-start-with-caused-by-org-neo4j-token-api-nonuniqueyokenexception-the-propertykey-namedtoken.adoc,1,medium,,
+79,"Explanation of error ""DeadlockDetectedException: ForsetiClient[0] can't acquire ExclusiveLock... ...""",Under specific scenarios a DeadlockDetectedException may be encountered and the behavior is described at,security,,articles\modules\ROOT\pages\explanation-of-error-deadlockdetectedexception-forseticlient-0-cant-acquire-exclusivelock.adoc,1,low,,
+80,"Explanation of error ""Failed to obtain connection towards WRITE server. Known routing table is: Ttl...""","In Neo4j 4.0, if you are logged into the `READ_REPLICA` of a Causal Cluster, and execute the following command to login into `cypher-shell`:",cypher,,articles\modules\ROOT\pages\explanation-of-error-failed-to-obtain-connection-towards-write-server.adoc,1,medium,,
+81,"Explanation of error ""java.lang.NoClassDefFoundError: org/apache/spark/sql/sources/v2/ReadSupport""","In Neo4j 4.x, if you are using the Databricks Run-time of Spark and the neo4j-spark-connector.",security,,articles\modules\ROOT\pages\explanation-of-error-java-lang-noclassdeffounderror-readsupport.adoc,1,low,,
+82,"Explanation of error ""javax.net.ssl.SSLException: Received fatal alert: certificate_unknown""","When connecting to a Neo4j instance with the Neo4j Browser, the following error may be logged in the `$NEO4J_HOME\logs\debug.log`",security,,articles\modules\ROOT\pages\explanation-of-error-javax-net-ssl-sslexception-received-fatal-alert-certificate-unknown.adoc,1,low,,
+83,"Explanation of error LOAD CSV error of ""Couldn't load the external resource ...""","When running a `LOAD CSV` Cypher statement, for example",cypher,"LOAD CSV WITH HEADERS FROM ""http://10.12.1.2/Neo4j/cities.csv"" AS row WITH row create (c:cities {name:row.city});",articles\modules\ROOT\pages\explanation-of-error-load-csv-error-of-couldnt-load-the-external-resource.adoc,1,high,,
+84,Explanation of error NoClassDefFoundError: org/neo4j/kernel/impl/util/JobScheduler,"Upon upgrading to Neo4j 3.3, if you were previously using https://github.com/neo4j-contrib/neo4j-apoc-procedures[APOC], and",security,,articles\modules\ROOT\pages\explanation-of-error-noclassdeffounderror-org-neo4j-kernel-impl-util-jobscheduler.adoc,1,medium,,
+85,Explanation of error on session connection using uniform drivers,"As described by http://neo4j.com/docs/developer-manual/current/drivers/#_trust, when establishing an encrypted connection, it needs to be verified that the remote peer is who we expected to connect to",security,,articles\modules\ROOT\pages\explanation-of-error-on-session-connection-using-uniform-drivers.adoc,1,medium,,
+86,"Explanation of error: procedure is not available due to having restricted access rights, check configuration","Commencing with Neo4j 3.2 when running a stored procedure, for example",cypher,call apoc.warmup.run();,articles\modules\ROOT\pages\explanation-of-error-procedure-is-not-available-due-to-having-restricted-access-rights-check-configuration.adoc,1,high,,
+87,"Explanation of error ""Record id 65536 is out of range [0, 65535]""","When running a Cypher statement that creates a new relationship type, for example",cypher,MERGE (n1:Person {id:1})-[r:knows]->(n2:Person {id:2}) | call db.relationshipTypes() yield relationshipType return count(relationshipType) as numRelTypes;,articles\modules\ROOT\pages\explanation-of-error-record-id-65536-is-out-of-range.adoc,1,high,,
+88,"Explanation of error ""Security Error: 18"" when using Internet Explorer and Neo4j Browser","When connecting to the Neo4j Browser `http://localhost:7474` and using Internet Explorer 11,",cypher,,articles\modules\ROOT\pages\explanation-of-error-security-error-18-when-using-internet-explorer-and-neo4j-browser.adoc,1,medium,,
+89,"Explanation of error ""Unrecognized transaction id. Transaction may have timed out and been rolled back""","When submitting a request via the http://neo4j.com/docs/stable/rest-api-transactional.html[Neo4j Transactional Cypher HTTP endpoint], one may encounter the following error",cypher,,articles\modules\ROOT\pages\explanation-of-error-unrecognized-transaction-id-transaction-may-have-timed-out-and-been-rolled-back.adoc,1,medium,,
+90,"Explanation of error ""WebSocket connection failure. Due to security constraints in your web browser, the reason for the failure is not available to this Neo4j Driver...","In Neo4j 3.0 and its implementation of the Bolt protocol, if a remote browser connects to Neo4j (http://<remote_neo4j_host>:7474) and attempts to authenticate, the following error may be encountered:",security,,articles\modules\ROOT\pages\explanation-of-error-websocket-connection-failure.adoc,1,medium,,
+91,Explanation of lucene-1.0: Too many open files error,If one encounters a 'Too many open files' error in their $NEO4J_HOME/logs/debug.log similar to,modeling,,articles\modules\ROOT\pages\explanation-of-lucene-1-0-too-many-open-files-error.adoc,1,medium,,
+92,"Explanation of start failure ""java.lang.NoClassDefFoundError: org/neo4j/kernel/impl/logging/LogService""",Upon starting Neo4j 3.5 if one encounters the following error in the `logs/neo4j.log`,security,,articles\modules\ROOT\pages\explanation-of-start-failure-noclassdeffounderror-org-neo4j-kernel-impl-logging-logservice.adoc,1,low,,
+93,Export a (sub)graph to Cypher script and import it again,Oftentimes you want to export a full (or partial) database to a file and import it again without copying the actual database files.,cypher,"// exports the whole database incl. indexes as cypher statements to the provided file
+CALL apoc.export.cypher.all('/tmp/export.cypher',{format:'cypher-shell'})
+
+// exports given nodes and relationships incl. indexes as cypher statements to the provided file
+MATCH path = (p1:Person)-[r:KNOWS]->(p2:Person)
+WITH collect(p1)+collect(p2) as export_nodes, collect(r) as export_rels
+CALL apoc.export.cypher.data(export_nodes,export_rels,'/tmp/export.cypher',{format:'cypher-shell'})
+YIELD file, source, format, nodes, relationships, properties, time
+RETURN nodes, relationships, time;
+
+// exports given graph object incl. indexes as cypher statements to the provided file
+...
+CALL apoc.graph.fromPaths([paths],'export_graph',{}) YIELD graph
+CALL apoc.export.cypher.graph(graph,'/tmp/export.cypher',{format:'cypher-shell'}) YIELD time
+RETURN time;
+
+// exports nodes and relationships from the cypher statement incl. indexes as cypher statements to the provided file
+CALL apoc.export.cypher.query(
+'MATCH (p1:Person)-[r:KNOWS]->(p2:Person) RETURN *',
+'/tmp/export.cypher',{format:'cypher-shell'}); | // create nodes
+:begin
+CREATE (:`UNIQUE IMPORT LABEL` {`UNIQUE IMPORT ID`:0});
+CREATE (:`User` {`age`:43, `name`:""User1""});
+:commit
+
+// add schema
+:begin
+CREATE INDEX ON :`User`(`age`);
+CREATE CONSTRAINT ON (node:`User`) ASSERT node.`name` IS UNIQUE;
+CREATE CONSTRAINT ON (node:`UNIQUE IMPORT LABEL`) ASSERT node.`UNIQUE IMPORT ID` IS UNIQUE;
+:commit
+
+// wait for index completion
+call db.awaitIndexes();
+
+// create relationships
+:begin
+MATCH (n1:`UNIQUE IMPORT LABEL`{`UNIQUE IMPORT ID`:0}), (n2:`User`{`name`:""User1""}) CREATE (n1)-[:`KNOWS` {`since`:2011}]->(n2);
+:commit
+
+// clean up temporary import keys (batched)
+:begin
+MATCH (n:`UNIQUE IMPORT LABEL`)  WITH n LIMIT 1000 REMOVE n:`UNIQUE IMPORT LABEL` REMOVE n.`UNIQUE IMPORT ID`;
+:commit
+:begin
+DROP CONSTRAINT ON (node:`UNIQUE IMPORT LABEL`) ASSERT node.`UNIQUE IMPORT ID` IS UNIQUE;
+:commit",articles\modules\ROOT\pages\export-sub-graph-to-cypher-and-import.adoc,1,high,,
+94,Extracting Java Error When Installing Neo4j Desktop,"In rare cases, Neo4j Desktop install might fail during the Java extract phase with the following message on Windows:",security,,articles\modules\ROOT\pages\extracting-java-error-during-neo4j-desktop-install.adoc,1,medium,,
+95,"Explanation of ""Failed to update routing table with server"" error",If you encounter a *Failed to update routing table with server* error in their `$NEO4J_HOME/logs/debug.log` similar to:,security,,articles\modules\ROOT\pages\failed-to-update-routing-table-with-server.adoc,1,low,,
+96,Fast counts using the count store,Neo4j maintains a transactional count store for holding count metadata for a number of things.,cypher,"MATCH (n)
+RETURN count(n) as count | MATCH (n:Person)
+RETURN count(n) as count",articles\modules\ROOT\pages\fast-counts-using-the-count-store.adoc,1,high,,
+97,Favorites for cypher-shell?,"The Neo4j Browser has always had the ability to record `favorites`, i.e. a bookmark to saved cypher that you may want to run sometime in the future.",cypher,,articles\modules\ROOT\pages\favorites-for-cypher-shell.adoc,1,medium,,
+98,Fix error: No dependency satisfies type interface org.neo4j.graphdb.GraphDatabaseService,"From Neo4j 3.5 onwards, there are 2 kinds of Extension Factories : global and per database.",security,,articles\modules\ROOT\pages\fix-error-no-dependefix-error-no-dependency-satisfies-type-interface-org-neo4j-graphdb.adoc,1,medium,,
+99,Four ways to check the consistency of a Neo4j graph,"When it comes checking the inconsistencies in your graph, there are four methods to do. This article describes them below:",security,,articles\modules\ROOT\pages\four-ways-to-check-consistency.adoc,1,medium,,
+100,Fulltext search in Neo4j,Please note that in Neo4j 3.5 fulltext search is available in Neo4j as part of Cypher stored procedures.,cypher,"CALL db.index.fulltext.createNodeIndex(""titlesAndDescriptions"",[""Movie"", ""Book""],[""title"", ""description"", ""review""]) | CALL db.index.fulltext.queryNodes(""titlesAndDescriptions"", ""Full Metal Jacket"") YIELD node, score
+RETURN node.title, node.review, score",articles\modules\ROOT\pages\fulltext-search-in-neo4j.adoc,1,high,,
+101,Geocoding with Arcgis,* Create/obtain an Arcgis account.,cypher,"WITH 'Statue of Liberty, Liberty Island New York, NY 10004' as address
+// get the configuration properties
+CALL apoc.static.getAll(""arcgis"") yield value AS arcgis
+// build the URL
+WITH arcgis.geocode_url+apoc.text.urlencode(address)+'&token='+ arcgis.key as url
+// extract the top result
+CALL apoc.load.json(url, '$.candidates[0].location') YIELD value as location
+return location.x, location.y | CALL apoc.static.getAll(""arcgis"") yield value AS arcgis
+WITH arcgis.token_url+'&client_id='+arcgis.client_id+'&client_secret='+arcgis.client_secret as tokenUrl
+CALL apoc.load.json(tokenUrl) YIELD value as tokenResponse
+WITH tokenResponse.access_token as token
+// proceed with geocoding using 'token'",articles\modules\ROOT\pages\geocoding-with-arcgis.adoc,1,low,,
+102,Getting a JVM heap dump,This document provides the process of creating a heap-dump on a java machine to investigate potential memory leaks.,performance,,articles\modules\ROOT\pages\getting-a-jvm-heap-dump.adoc,1,medium,,
+103,Graph Analytics In Layman Terms,"Graphs in general are very powerful in providing answers where relations do matter a lot.  In this context, using graph queries (Cypher) allows us to answer specific questions when we know what to loo",cypher,,articles\modules\ROOT\pages\graph-analytics-in-layman-terms.adoc,1,medium,,
+104,HA Proxy Configuration for Online Backup,"Online backup should be scheduled to run periodically on a production cluster. You only need to run it on one instance, since",security,,articles\modules\ROOT\pages\ha-proxy-configuration-for-online-backup.adoc,1,low,,
+105,Helpful Commands When Supporting Neo4j,**Top 50 Slowest queries from Query log:**,cypher,,articles\modules\ROOT\pages\helpful-commands-when-supporting-neo4j.adoc,1,low,,
+106,Hosting Multiple Neo4j Instances On One Machine,This document lists some considerations whilst planning to host multiple neo4j instances on the same physical host machine.,security,,articles\modules\ROOT\pages\hosting-multiple-neo4j-instances-on-one-machine.adoc,1,medium,,
+107,Retired: How can I skip Consistency Check during Backup?,Backups in Neo4j automatically run a consistency check against the backed-up store.,performance,,articles\modules\ROOT\pages\how-can-i-skip-consistency-check-during-backup.adoc,1,medium,,
+108,How deletes work in Neo4j,"Neo4j uses logical deletes to delete from the database to achieve maximum performance and scalability. To understand how this might appear to an operator of the database, lets take a simple case of lo",performance,,articles\modules\ROOT\pages\how-deletes-workin-neo4j.adoc,1,medium,,
+109,How do I achieve the equivalent of a SQL Having clause with Cypher,With a traditional SQL based database a HAVING clause will restrict aggregated values.  For example,cypher,"match (n:Person) 
+with n.zipcode as zip, count(*) as population 
+where population > 100000
+return zip, population",articles\modules\ROOT\pages\how-do-i-achieve-the-equivalent-of-a-sql-having-clause-with-cypher.adoc,1,high,,
+110,How do I allow for authentication using Active Directory attribute samAccountName,"Commencing with Neo4j https://github.com/neo4j/neo4j/wiki/Neo4j-3.2-changelog#322[3.2.2], it is now possible to authenticate using",security,"neo4j> create (n:Person {id:1});
+0 rows available after 231 ms, consumed after another 1 ms
+Added 1 nodes, Set 1 properties, Added 1 labels
+neo4j> match (n:Person {id:1}) return n;
++",articles\modules\ROOT\pages\how-do-i-allow-for-authentication-using-active-directory-attribute-samaccountname.adoc,1,low,,
+111,How do I authenticate with cypher-shell without specifying the username and password on the command line,When using `$NEO4J_HOME/bin/cypher-shell` at the command line and authentication is enabled via the setting `$NEO4J_HOME/conf/neo4j.conf`:,cypher,,articles\modules\ROOT\pages\how-do-i-authenticate-with-cypher-shell-without-specifying-the-username-and-password-on-the-command-line.adoc,1,medium,,
+112,How do I automate the copy of auth files in a clustered environment,"In a clustered Neo4j implementation, user authentication files are recorded in each instance at $NEO4J_HOME/data/dbms.",security,,articles\modules\ROOT\pages\how-do-i-automate-the-copy-of-auth-files-in-a-clustered-environment.adoc,1,low,,
+113,How do I compare two graphs for equality,"If you are looking to compare 2 graphs (or sub-graphs) to determine if they are equivalent, the following Cypher will produce a md5sum of the nodes and properties to make that comparison. For example,",cypher,"MATCH (n:Movie)
+WITH n
+ORDER BY n.title
+WITH collect(properties(n)) AS propresult
+RETURN apoc.util.md5(propresult); | MATCH (n:Movie)
+WITH n
+ORDER BY n.title
+WITH collect(properties(n)) AS propresult
+CALL apoc.util.md5(propresult) YIELD value AS md5_property
+RETURN md5_property",articles\modules\ROOT\pages\how-do-i-compare-two-graphs-for-equality.adoc,1,high,,
+114,How do I configure init and max java heap when running bin/neo4j-backup,When running `$NEO4J_HOME/bin/neo4j-backup` if a Java out of heap/memory error occurs you may want define the init and max,performance,,articles\modules\ROOT\pages\how-do-i-configure-init-and-max-java-heap-when-running-bin-neo4j-backup.adoc,1,medium,,
+115,How do i configure Neo4j so that data/graph.db/messages.log is automatically rotated,"As tested and verified with Neo4j 2.3.0, the `data/graph.db/messages.log`, its size and number of rotated archives is governed by the following parameters in the `conf/neo4j.properties` file",security,,articles\modules\ROOT\pages\how-do-i-configure-neo4j-so-that-data-graph-db-messages-log-is-automatically-rotated.adoc,1,medium,,
+116,How do I convert a property representing a date timestamp to another timezone,https://neo4j.com/docs/cypher-manual/current/syntax/temporal/[Temporal datatype] support was introduced with with Neo4j 3.4 and as a result it,cypher,"MATCH (n:Person) 
+       where    exists(n.date_enrolled)
+       return   n.date_enrolled,
+                datetime({datetime:datetime(n.date_enrolled), timezone:'America/New York'}) as EST limit 1; | CREATE (n:Person) set n.date_enrolled='2019-02-26T01:23:40Z'",articles\modules\ROOT\pages\how-do-i-convert-a-property-representing-a-date-timestamp-to-another-timezone.adoc,1,high,,
+117,How do I convert Neo4j logs from base UTC to local timezone,With the introduction of Neo4j https://github.com/neo4j/neo4j/pull/10217[3.3.1] it is possible to represent date timestamps in,security,,articles\modules\ROOT\pages\how-do-i-convert-neo4j-logs-from-base-utc-to-local-timezone.adoc,1,medium,,
+118,How do I define a LOAD CSV FIELDTERMINATOR in hexidecimal notation,"When using https://neo4j.com/docs/developer-manual/current/cypher/#query-load-csv[LOAD CSV] one can define the field delimiter used,",cypher,"LOAD CSV WITH HEADERS from 'file:///actors.csv' as row
+FIELDTERMINATOR ';'
+RETURN row.name; | LOAD CSV WITH HEADERS from 'file:///actors.csv' as row
+FIELDTERMINATOR '\u0080'
+RETURN row.name;",articles\modules\ROOT\pages\how-do-i-define-a-load-csv-fieldterminator-in-hexidecimal-notation.adoc,1,high,,
+119,"How do I define, display, and use parameters with neo4j-shell",`bin/neo4j-shell` allows for a command line interface to query your graph via Cypher statements and to include parameters to those statements.,cypher,,articles\modules\ROOT\pages\how-do-i-define-display-use-parameters-with-neo4j-shell.adoc,1,medium,,
+120,How do I define my graph.db at a path other than under NEO4J_HOME for Windows,"Commencing with Neo4j 3.0, the default location for your `graph.db` directory is under `$NEO4J_HOME\databases\`.",security,,articles\modules\ROOT\pages\how-do-i-define-my-graphdb-at-a-path-other-than-under-neo4j-home-for-windows.adoc,1,medium,,
+121,How do I determine the number of nodes and relationships to be effected by a detach delete,Prior to running a `match .... detach delete n;` which will find said nodes and delete all relationships associated with said nodes as well as delete the nodes themselves one might want to run a query,cypher,"match (n:Person) return count(n), sum ( size( (n)-[]->()));",articles\modules\ROOT\pages\how-do-i-determine-number-of-nodes-and-relationships-effected-by-detach-delete.adoc,1,high,,
+122,How do I display a hostname rather than IP address in the Causal Clustering Members section of sysinfo,Via the browser one can enter `:sysinfo` to display data about the Neo4j system. When Neo4j is configured as a,security,,articles\modules\ROOT\pages\how-do-i-display-a-hostname-rather-than-ip-address-in-causal-clustering-members-section-of-sysinfo.adoc,1,low,,
+123,How do I display all nodes with no defined labels,"Although assigning a node one or more labels provides many benefits (i.e. performance gains from index usage, ability to group nodes into sets, etc), it is possible to create a node without any labels",cypher,MATCH (n) WHERE size(labels(n)) = 0 RETURN n,articles\modules\ROOT\pages\how-do-i-display-all-nodes-with-no-defined-labels.adoc,1,high,,
+124,How do I display date and time of when neo4j was started and other metrics,The following Cypher will utilize the JMX metrics as part of 3.1 Enterprise and display the date/time when Neo4j was started.,cypher,"CALL dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Kernel"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return row,
+         case row
+             when 'StoreCreationDate' then apoc.date.format(attributes[row][""value""],""ms"", null, apoc.date.systemTimezone())
+             when 'KernelStartTime' then apoc.date.format(attributes[row][""value""],""ms"", null, apoc.date.systemTimezone())
+             else attributes[row][""value""] end as value;",articles\modules\ROOT\pages\how-do-i-display-date-and-time-of-when-neo4j-was-started-and-other-metrics.adoc,1,high,,
+125,How do I display the nodes with the most properties,"To display the nodes with the most properties defined, run the following Cypher:",cypher,"MATCH (n)
+RETURN labels(n), keys(n), size(keys(n)), count(*)
+ORDER BY size(keys(n)) DESC",articles\modules\ROOT\pages\how-do-i-display-the-nodes-with-the-most-properties.adoc,1,high,,
+126,How do I display the REST code from the 3.0 Browser,"In Neo4j 3.0 and its implementation of the Bolt protocol, requests submitted via the browser (http://localhost:7474) are submitted using Bolt.",security,,articles\modules\ROOT\pages\how-do-i-display-the-rest-code-from-the-3-0-browser.adoc,1,medium,,
+127,How do I enable Java Flight Recorder and view the Results,http://www.oracle.com/technetwork/java/javaseproducts/mission-control/java-mission-control-1998576.html[Java Flight Recorder] can,security,,articles\modules\ROOT\pages\how-do-i-enable-java-flight-recorder-and-view-the-results.adoc,1,medium,,
+128,How do I enable remote HTTPS access with Neo4j 3.0.x,With 3.0.x to enabled remote clients to connect to a HTTPS enabled browser the following parameters in the `$NEO4J_HOME/conf/neo4j.conf` need to be changed from the default of,security,,articles\modules\ROOT\pages\how-do-i-enable-remote-https-access-with-neo4j-30x.adoc,1,low,,
+129,How do I export Cypher Favorites recorded in the browser,Cypher Favorites are common Cypher statements which one can save to the left panel of the Neo4j browser.,cypher,,articles\modules\ROOT\pages\how-do-i-export-cypher-favorites-recorded-in-the-browser.adoc,1,medium,,
+130,How do I improve the performance of counting number of relationships on a node,Using Cypher one could count number of relationships in the following manner,cypher,"MATCH (n:Actor {name:'Sylvester Stallone'})-->() RETURN count(*); | MATCH (n:Actor {name:'Sylvester Stallone'})
+RETURN size((n)-->())",articles\modules\ROOT\pages\how-do-i-improve-the-performance-of-counting-number-of-relationships-on-a-node.adoc,1,high,,
+131,How do I log parameter values into the query.log file,Neo4j 3.0 introduced the ability to log the value of query parameters in the `log/query.log` file.,cypher,,articles\modules\ROOT\pages\how-do-i-log-parameter-values-into-the-query-log-file.adoc,1,medium,,
+132,How do I override browser configuration settings,Commencing with Neo4j 3.2.2 one can override default configuration settings of the browser whereby a number of these settings,security,":config | :config {maxFrames:10, theme: ""outline""}",articles\modules\ROOT\pages\how-do-i-override-browser-configuration-settings.adoc,1,high,,
+133,How do I pass parameters when calling apoc.cypher.runFile,"https://neo4j.com/developer/neo4j-apoc/[APOC] allows one to have a stored procedure,",cypher,"create (n:Person {id:123, name:'Emil Eifrem'}); | call apoc.cypher.runFile(""myRunFile.cyp"",{}) yield row, result;",articles\modules\ROOT\pages\how-do-i-pass-parameters-when-calling-apoc-cypher-runfile.adoc,1,high,,
+134,How do I perform the equivalent of a SQL Create Table as Select with Cypher,With a traditional SQL RDBMS one could perform a `create table as select` (i.e. CTAS) whereby its purpose is to create a,cypher,"MATCH (n:Movie) 
+MERGE (m:New_Movie) 
+SET m=n; | call apoc.periodic.iterate(""MATCH (n:Movie) RETURN properties(n) as props"", ""CREATE (m:New_Movie) SET m = props"",{});",articles\modules\ROOT\pages\how-do-i-perform-the-equivalent-of-a-sql-ctas.adoc,1,high,,
+135,How do I produce a profile/explain through cypher-shell and pipeing query file,If you prepare a file with a Cypher statement that includes either a,cypher,profile match (n:Movies) return count(n);,articles\modules\ROOT\pages\how-do-i-produce-a-profile-explain-through-cypher-shell-and-pipeing-query-file.adoc,1,high,,
+136,"How do I produce an inventory of statistics on nodes, relationships, properties",Using the following Cypher,cypher,"MATCH (n) WHERE rand() <= 0.1
+WITH labels(n) as labels, size(keys(n)) as props, size((n)--()) as degree
+RETURN
+DISTINCT labels,
+count(*) AS NumofNodes,
+avg(props) AS AvgNumOfPropPerNode,
+min(props) AS MinNumPropPerNode,
+max(props) AS MaxNumPropPerNode,
+avg(degree) AS AvgNumOfRelationships,
+min(degree) AS MinNumOfRelationships,
+max(degree) AS MaxNumOfRelationships",articles\modules\ROOT\pages\how-do-i-produce-an-inventory-of-statistics-on-nodes-relationships-properties.adoc,1,low,,
+137,How do I quickly identify long gc pauses via the messages or debug logs,"Java Garbage Collection (gc) pauses are monitored by the `MonitorGc` process in Neo4j, and recorded in the `$NEO4J_HOME/logs/debug.log` (",security,,articles\modules\ROOT\pages\how-do-i-quickly-identify-long-gc-pauses-via-the-messages-or-debug-logs.adoc,1,low,,
+138,How do I quickly switch between multiple graphs without modifying neo4j.conf?,"If you have multiple graphs set up and want to quickly switch between each without modifying `dbms.active_database` in `conf/neo4j.conf`,",security,,articles\modules\ROOT\pages\how-do-i-quickly-switch-between-multiple-graphs-without-modifying-neo4j-conf.adoc,1,low,,
+139,How do I report on nodes with multiple labels,"If your data model has chosen to define multiple labels on a node, for example",cypher,create (n:Actor:Director {name:'Clint Eastwood'}) | match (n) where n:Actor and n:Director return n;,articles\modules\ROOT\pages\how-do-i-report-on-nodes-with-multiple-labels.adoc,1,high,,
+140,How do I run Consistency Check Manually?,"If you skip the Consistency Check part of neo4j-backup, or you want to check that all is well with a data store, you can run the tool against an offline store.",performance,,articles\modules\ROOT\pages\how-do-i-run-consistency-check-manually.adoc,1,medium,,
+141,How do I set a breakpoint in a Cypher statement for further analysis,If you wish to set a 'breakpoint' in a Cypher statement so as to perform further analysis,cypher,"MERGE (n:Movie {title:'The Matrix'}) 
+set n.production_company='Warner Brothers'
+with n call apoc.util.sleep(10000) return n; | MERGE (n:Movie {title:'The Matrix'})  
+with n call apoc.util.sleep(10000)  
+set n.production_company='Warner Brothers' return n;",articles\modules\ROOT\pages\how-do-i-set-a-breakpoint-in-a-cypher-statement-for-further-analysis.adoc,1,high,,
+142,How do I specify the field and array delimiter to neo4j-import as a ASCII character,http://neo4j.com/docs/operations-manual/current/tutorial/import-tool/[neo4j-import] allows one to initially load a graph.db via CSV files.,security,,articles\modules\ROOT\pages\how-do-i-specify-the-field-and-array-delimiter-to-neo4j-import-as-a-ascii-character.adoc,1,low,,
+143,How do I use Cypher to connect to a RDBMS using JDBC,"With the inclusion of java stored procedures in Neo4j 3.x, one can run Cypher to connect to a RDBMS using JDBC.",cypher,"CALL apoc.load.jdbc('jdbc:mysql://localhost:3306/proddb1?user=root&password=football','select title from movies where studio=\'MGM Studios\'') YIELD row
+CREATE (n:Movies {name:row.title}) | call apoc.load.driver('com.mysql.jdbc.Driver')",articles\modules\ROOT\pages\how-do-i-use-cypher-to-connect-to-a-rbms-using-jdbc.adoc,1,high,,
+144,How do I use LOAD CSV to update/set properties of existing nodes,"One can use `LOAD CSV` to perform a bulk update to existing nodes, and create new nodes, as follows.",cypher,"LOAD CSV FROM ""file:///Movies.csv"" AS csvLine
+MERGE (n:Movie {id:csvLine[0]})
+ON CREATE SET n.id=csvLine[0],n.name=csvLine[1], n.TotalRevenue = csvLine[2]
+ON MATCH SET n.TotalRevenue = csvLine[2]",articles\modules\ROOT\pages\how-do-i-use-load-csv-to-update-set-properties-of-existing-nodes.adoc,1,high,,
+145,How do I use LOAD CSV with data including quotes,"When using *LOAD CSV* to read a file which includes data with double quote characters (""), the quotes need to be escaped as 2 double quote characters",security,"LOAD CSV WITH HEADERS FROM ""file:///courses.csv"" AS row CREATE (:Course { courseID: toInt(row.COURSE_ID), courseTitle: row.COURSE_TITLE});",articles\modules\ROOT\pages\how-do-i-use-load-csv-with-data-including-quotes.adoc,1,high,,
+146,How do I view the column headers of a CSV file with LOAD CSV,If one has a CSV file with the following content,cypher,load csv with headers from 'file:///test.csv' as row with row limit 1 return keys(row);,articles\modules\ROOT\pages\how-do-i-view-the-column-headers-of-a-csv-file-with-load-csv.adoc,1,low,,
+147,How do I zoom in/out within the graph visualization of the browser?,"Within the graph visualization pane of the browser (reached locally at http://localhost:7474), to zoom in/out of the graph display one first needs to select *Full Screen* mode. The zoom in/out control",security,,articles\modules\ROOT\pages\how-do-i-zoom-in-out-within-the-graph-visualization-of-the-browser.adoc,1,medium,,
+148,How do I recover from No space left on device,If one does not routinely monitor the disk space usage on a Neo4j server one may encounter a 'No space left on device',security,,articles\modules\ROOT\pages\how-do-recover-from-no-space-left-on-device.adoc,1,low,,
+149,How does apoc.periodic.iterate work with resources?,How does apoc.periodic.iterate work?,cypher,,articles\modules\ROOT\pages\how-does-apoc-periodic-iterate-work-with-resources.adoc,1,low,,
+150,How Neo4j Browser uses bolt+routing,There are two kinds of Bolt drivers specified by URI scheme: the *bolt://* scheme is used to create a direct driver and the *bolt+routing://* scheme is used to create a routing driver.,security,,articles\modules\ROOT\pages\how-neo4j-browser-bolt-routing.adoc,1,medium,,
+151,How Does Neo4j Browser interact with Neo4j Server?,"Starting with Neo4j 3.2, the Neo4j Browser only supports Bolt connectivity to the Neo4j Server.  This requires that the network",security,,articles\modules\ROOT\pages\how-neo4j-browser-interacts-with-neo4j-server.adoc,1,low,,
+152,How to avoid costly traversals with join hints,"When matching a pattern using Cypher, the number of possible paths to evaluate often correlates with query execution time.",cypher,"MATCH (me:Person {name:'Me'})-[:FRIENDS_WITH]-(friend)-[:LIKES]->(a:Artist)<-[:LIKES]-(me)
+RETURN a, count(a) as likesInCommon | MATCH (me:Person {name:'Me'})-[:FRIENDS_WITH]-(friend)-[:LIKES]->(a:Artist)<-[:LIKES]-(me)
+USING JOIN on a
+RETURN a, count(a) as likesInCommon",articles\modules\ROOT\pages\how-to-avoid-costly-traversals-with-join-hints.adoc,1,high,,
+153,How to avoid using excessive memory on deletes involving dense nodes,"In situations where you know you need to delete a bunch of nodes (and by rule their relationships as well), it can be tempting to simply",cypher,"MATCH (n:TTL)
+WHERE n.ttl < timestamp()
+WITH collect(n) AS nn
+CALL apoc.periodic.commit(""
+  UNWIND $nodes AS n
+  WITH sum(size((n)--())) AS count_remaining,
+       collect(n) AS nn
+  UNWIND nn AS n
+  OPTIONAL MATCH (n)-[r]-()
+  WITH n, r, count_remaining
+  LIMIT $limit
+  DELETE r
+  RETURN count_remaining
+"",{limit:10000, nodes:nn}) yield updates, executions, runtime, batches, failedBatches, batchErrors, failedCommits, commitErrors
+UNWIND nn AS n
+DELETE n
+RETURN updates, executions, runtime, batches",articles\modules\ROOT\pages\how-to-bulk-delete-dense-nodes.adoc,1,high,,
+154,How to check for time range overlap in Cypher,"Neo4j 3.4 introduced temporal types into Cypher, so now we have dates, dateTimes, and their local versions, too, as well as durations.",cypher,"CREATE (:Event {id:1, start:date(), end:date() + duration({days:5})}),
+       (:Event {id:2, start:date() + duration({days:3}), end:date() + duration({days:8})}) | MATCH (e1:Event {id:1}), (e2:Event {id:2})
+WITH CASE WHEN e1.start >= e2.start THEN e1.start ELSE e2.start END as maxStart,
+     CASE WHEN e1.end <= e2.end THEN e1.end ELSE e2.end END as minEnd
+RETURN maxStart <= minEnd as rangesOverlap",articles\modules\ROOT\pages\how-to-check-time-range-overlap.adoc,1,high,,
+155,How to collect Neo4j logs,"When raising Neo4j Support cases, it is important to upload Neo4j logs.",security,,articles\modules\ROOT\pages\how-to-collect-neo4j-logs.adoc,1,low,,
+156,How to configure mixed-mode security (native and LDAP) in Neo4j,"For environments where you need both LDAP authentication as well as some native user accounts, there is a way to allow this in Neo4j 3.1 and newer. Use the configuration setting `dbms.security.auth_pr",security,,articles\modules\ROOT\pages\how-to-configure-mixed-mode-security-in-neo4j.adoc,1,low,,
+157,How to configure off-heap transaction state,"WARNING: This feature is experimental in 3.5, on by default in 4.0.",performance,,articles\modules\ROOT\pages\how-to-configure-off-heap-transaction-state.adoc,1,medium,,
+158,How to estimate initial memory configuration,"The initial and eventual memory configuration parameters can be a moving target, based on how your store changes in size and how your workload increases or changes over time.",performance,,articles\modules\ROOT\pages\how-to-estimate-initial-memory-configuration.adoc,1,medium,,
+159,"How to fix ""Cannot close the PageCache while files are still mapped""","It is common to start the database as different users, this can leave store files owned by other user ids.",performance,,articles\modules\ROOT\pages\how-to-fix-cannot-close-the-pagecache-while-files-are-still-mapped.adoc,1,medium,,
+160,How to generate sysinfo output from Cypher,If you need to generate the equivalent output from command `:sysinfo` as run from the Neo4j Browser at http://localhost:7474,cypher,"call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Store file sizes"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""StoreSizes"" as type,row,attributes[row][""value""]
+
+union all
+
+call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Page cache"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""PageCache"" as type,row,attributes[row][""value""]
+
+union all
+
+call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Primitive count"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""ID Allocations"" as type,row,attributes[row][""value""]  
+
+union all
+
+call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Transactions"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""Transactions"" as type,row,attributes[row][""value""]
+
+union all
+
+call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=High Availability"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""High Availability"" as type,row,attributes[row][""value""]
+
+union all
+
+call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Causal Clustering"") yield attributes
+       with  keys(attributes) as k , attributes
+       unwind k as row
+       return ""Causal Cluster"" as type,row,attributes[row][""value""];",articles\modules\ROOT\pages\how-to-generate-sysinfo-output-from-cypher.adoc,1,high,,
+161,How to get a high level inventory of objects in your graph (part 2),Following the knowledge base article on link:https://support.neo4j.com/hc/en-us/articles/227267088-How-to-get-a-high-level-inventory-of-objects-in-your-graph[How to get a high level inventory of objec,cypher,"match (n) return 'Number of Nodes: ' + count(n) as output UNION
+match ()-[]->() return 'Number of Relationships: ' + count(*) as output UNION
+CALL db.labels() YIELD label RETURN 'Number of Labels: ' + count(*) AS output UNION
+CALL db.relationshipTypes() YIELD relationshipType  RETURN 'Number of Relationships Types: ' + count(*) AS output UNION
+CALL db.propertyKeys() YIELD propertyKey  RETURN 'Number of Property Keys: ' + count(*) AS output UNION
+CALL db.constraints() YIELD description RETURN 'Number of Constraints:' + count(*) AS output UNION
+CALL db.indexes() YIELD description RETURN 'Number of Indexes: ' + count(*) AS output UNION
+CALL dbms.procedures() YIELD name RETURN 'Number of Procedures: ' + count(*) AS output",articles\modules\ROOT\pages\how-to-get-a-high-level-inventory-of-objects-in-your-graph-part-2.adoc,1,high,,
+162,How to get a high level inventory of objects in your graph,The following Cypher can be used to get a simple high level view of the number of objects within your graph database.,cypher,"match (n) return 'Number of Nodes: ' + count(n) as output UNION
+match ()-[]->() return 'Number of Relationships: ' + count(*) as output UNION
+CALL db.labels() YIELD label RETURN 'Number of Labels: ' + count(*) AS output UNION
+CALL db.relationshipTypes() YIELD relationshipType  RETURN 'Number of Relationships Types: ' + count(*) AS output UNION
+CALL db.propertyKeys() YIELD propertyKey  RETURN 'Number of Property Keys: ' + count(*) AS output UNION
+CALL db.constraints() YIELD description RETURN 'Number of Constraints:' + count(*) AS output UNION
+CALL db.indexes() YIELD description RETURN 'Number of Indexes: ' + count(*) AS output UNION
+CALL dbms.procedures() YIELD name RETURN 'Number of Procedures: ' + count(*) AS output",articles\modules\ROOT\pages\how-to-get-a-high-level-inventory-of-objects-in-your-graph.adoc,1,high,,
+163,How to implement a primary key property for a label,Commencing with Neo4j 2.3.x it is possible to create the equivalent of a primary key on a property of a label.,cypher,"CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE
+CREATE CONSTRAINT ON (book:Book) ASSERT exists(book.isbn)",articles\modules\ROOT\pages\how-to-implement-a-primary-key-property-for-a-label.adoc,1,high,,
+164,How to import a GrapheneDB database into Neo4j Desktop,This assumes you already have the zip file of the GrapheneDB database.,security,,articles\modules\ROOT\pages\how-to-import-a-graphenedb-database-into-neo4j-desktop.adoc,1,low,,
+165,How to install Neo4j in a disconnected environment,Premise: You are working with a private/disconnected environment and would like to install the Neo4j Database using RPM packages as a source.,security,,articles\modules\ROOT\pages\how-to-install-neo4j-in-a-disconnected-environment.adoc,1,low,,
+166,How to List and Install Neo4j Versions Using yum,"Prior to Neo4j 3.2, the rpm distribution of Neo4j was experimental at this time. Use with caution and we advise installing",security,,articles\modules\ROOT\pages\how-to-list-and-install-neo4j-versions-using-yum.adoc,1,low,,
+167,How to log to neo4j.log in a Server Plugin,"As part of the major changes in 3.0, the way to log to the user log, now neo4j.log (in server mode), has changed. To log within a Server Plugin follow these steps:",security,,articles\modules\ROOT\pages\how-to-log-to-neo4jlog-in-a-server-plugin.adoc,1,low,,
+168,How to log to neo4j.log in an Unmanaged Extension,"As part of the major changes in 3.0, the way to log to the user log, now neo4j.log (in server mode), has changed. To log within an Unmanaged Extension is quite straightforward:",security,,articles\modules\ROOT\pages\how-to-log-to-neo4jlog-in-an-unmanaged-extension.adoc,1,low,,
+169,How to logrotate neo4j.log file,"The neo4j.log file is a redirection to STDOUT. When you implement a default logrotate strategy,",security,,articles\modules\ROOT\pages\how-to-logrotate-neo4j-dot-log.adoc,1,low,,
+170,Retired: How to manually clear the Node and Relationship Cache,This is no longer applicable in Neo4j 2.3+,modeling,,articles\modules\ROOT\pages\how-to-manually-clear-the-node-and-relationship-cache.adoc,1,low,,
+171,How to monitor if a follower is in sync with Leader (Causal Cluster),"To monitor if a Follower is in sync with its Leader, or know how much it is lagging behind, it is possible to check the *Last Commited Transaction Id* from Leader and Follower.",security,"call dbms.queryJmx(""org.neo4j:instance=kernel#0,name=Transactions"") yield attributes 
+return attributes[""LastCommittedTxId""]",articles\modules\ROOT\pages\how-to-monitor-if-a-follower-is-in-sync-with-leader-causal-cluster.adoc,1,low,,
+172,How to monitor Neo4j with Prometheus,"Commencing with the release of Neo4j Enterprise 3.4, one can now use the open source monitoring tool",security,,articles\modules\ROOT\pages\how-to-monitor-neo4j-with-prometheus.adoc,1,medium,,
+173,How to perform a Soundex search,Using https://neo4j.com/labs/apoc/4.4/overview/apoc.text/apoc.text.phonetic/[apoc.text.phonetic] one can perform a,cypher,"CREATE (n:Person {name:'Anders'})
+CREATE (m:Person {name:'Andrew'})
+CREATE (p:Person {name:'Andres'})",articles\modules\ROOT\pages\how-to-perform-a-soundex-search.adoc,1,high,,
+174,How to properly shutdown a Neo4j database after receiving the message *took more than 120 seconds to stop*,The neo4j script under the `bin/` directory of any standard Neo4j install is the primary means of shutting down a running Neo4j instance. That script accepts a `stop` argument that will try to shutdow,security,,articles\modules\ROOT\pages\how-to-properly-shutdown-a-neo4j-database.adoc,1,medium,,
+175,How to Setup Neo4j to Startup on Linux Server Reboot,"If you want to emulate the Neo4j RPM service with a tar installation on Linux systems, do the following steps:",security,,articles\modules\ROOT\pages\how-to-setup-neo4j-to-startup-on-linux-server-reboot.adoc,1,low,,
+176,"Solving the ""Store copy failed due to store ID mismatch"" error","It is possible that after seeding a cluster or restoring from a backup, you may encounter the following error while starting your cluster:",cypher,,articles\modules\ROOT\pages\how-to-solve-store-copy-failed-due-to-store-id-mismatch.adoc,1,medium,,
+177,How activation keys work,"Activation keys are mini-contracts that are signed by Neo4j, granting access to a ""feature"". Typically,",security,,articles\modules\ROOT\pages\how-to-use-activation-keys.adoc,1,medium,,
+178,How to use the BI Connector on the Command Line,This article describes how to use the BI Connector integration with SQLLine.,security,,articles\modules\ROOT\pages\how-to-use-the-bi-connector-with-sqlline.adoc,1,medium,,
+179,How to use the BI Connector with Tableau Desktop,This article describes how to use the BI Connector integration with Tableau Desktop.,security,,articles\modules\ROOT\pages\how-to-use-the-bi-connector-with-tableau-desktop.adoc,1,medium,,
+180,How to use the BI Connector with Tableau Server,This article describes how to use the BI Connector integration with Tableau Server.,security,,articles\modules\ROOT\pages\how-to-use-the-bi-connector-with-tableau-server.adoc,1,medium,,
+181,How to Use the Debug Log Parser Script,"For analysis of the Neo4j debug.log, read this guide for using the `debugInfo.sh` parser script.",security,,articles\modules\ROOT\pages\how-to-use-the-debug-log-parser-script.adoc,1,medium,,
+182,How to write a Cypher query to return the top N results per category,The following Cypher describes how you can display the Top 5 test scores within an entire :Score population broken,cypher,"create (n:Score {student_id: 'DC001', score: 89, field_of_study: 'chemistry'});
+create (n:Score {student_id: 'MK812', score: 97, field_of_study: 'chemistry'});
+create (n:Score {student_id: 'JT909', score: 77, field_of_study: 'chemistry'});
+create (n:Score {student_id: 'SA743', score: 84, field_of_study: 'chemistry'});
+create (n:Score {student_id: 'EH331', score: 68, field_of_study: 'chemistry'});
+
+create (n:Score {student_id: 'AE034', score: 89, field_of_study: 'economics'});
+create (n:Score {student_id: 'DC001', score: 91, field_of_study: 'economics'});
+create (n:Score {student_id: 'JF623', score: 74, field_of_study: 'economics'});
+create (n:Score {student_id: 'TP810', score: 77, field_of_study: 'economics'});
+create (n:Score {student_id: 'BB317', score: 82, field_of_study: 'economics'});
+create (n:Score {student_id: 'AH042', score: 61, field_of_study: 'economics'});
+create (n:Score {student_id: 'RV448', score: 59, field_of_study: 'economics'}); | match (n:Score) 
+with n order by n.score desc
+with n.field_of_study as class,collect(n.student_id + '('+ n.score +')') as student
+return class,student[0..5]
+order by class",articles\modules\ROOT\pages\how-to-write-a-cypher-query-to-return-the-top-n-results-per-catgeory.adoc,1,high,,
+183,"Importing CSV Files: Neo4j Aura, Desktop and Sandbox",Loading various kinds of files into Neo4j requires different locations depending on the tool you are using.,cypher,"LOAD CSV FROM 'https://raw.githubusercontent.com/<yourFileRepositoryPath>' AS row
+RETURN row 
+LIMIT 20 | LOAD CSV FROM 'http://data.neo4j.com/northwind/products.csv' AS row
+RETURN row",articles\modules\ROOT\pages\import-csv-locations.adoc,1,high,,
+184,Increasing Systemd Thread Limits,"In some high workload, and large scale multi-database environments, you may find that your Systemd unit configuration limits the maximum number of processes (""tasks"") too low for your use case.",security,,articles\modules\ROOT\pages\increasing-systemd-thread-limits.adoc,1,low,,
+185,Index limitations and workarounds,In this article we discuss index providers and what limitations and workarounds there are.,cypher,"CREATE INDEX ""My index"" FOR (p:Person) ON (p.name)",articles\modules\ROOT\pages\index-limitations-and-workaround.adoc,1,high,,
+186,"Installing Neo4j Database on Debian or Ubuntu fails with ""The following packages have unmet dependencies""",*Installing Neo4j Database on Debian or Ubuntu fails with the error:*,cypher,,articles\modules\ROOT\pages\installing-neo4j-on-debian-or-ubuntu-fails-with-packages-have-unmet-dependencies.adoc,1,medium,,
+187,Why did I get the “Kernel API returned non-existent relationship type: -1” exception?,"In rare situations, the Neo4j Bolt driver throws an IllegalStateException. The top part of the stack appears as:",cypher,,articles\modules\ROOT\pages\kernel-api-returned-non-existent-relationship-type-exception.adoc,1,medium,,
+188,Large Delete Transaction Best Practices in Neo4j,"In order to achieve the best performance, and avoid negative effects on the rest of the system, consider these best practices when processing large deletes.",cypher,"MATCH (n:Foo) where n.foo='bar'
+CALL { WITH n
+DETACH DELETE n
+} IN TRANSACTIONS OF 10000 ROWS; | call apoc.periodic.iterate(""MATCH (n:Foo) where n.foo='bar' return id(n) as id"", ""MATCH (n) WHERE id(n) = id DETACH DELETE n"", {batchSize:10000})
+yield batches, total return batches, total",articles\modules\ROOT\pages\large-delete-transaction-best-practices-in-neo4j.adoc,1,high,,
+189,LDAP Error: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target,When configuring LDAP with certificates you may encounter the following issue:,security,,articles\modules\ROOT\pages\ldap-error-unable-to-find-valid-certification-path-to-requested-target.adoc,1,low,,
+190,Limiting Bolt Threads vs Connections,"Given high levels of read/write transaction requests, some ingress transactions may be rejected by the Neo4j server and the",security,,articles\modules\ROOT\pages\limiting-bolt-threads-vs-connections.adoc,1,low,,
+191,Limiting MATCH results per row,"Since `LIMIT` applies to the total number of rows of the query, it can't be used in cases when matching from multiple nodes where the limit must be on match results per row.",cypher,"MATCH (:Movie{title:'The Matrix'})<-[:ACTED_IN]-(p:Person)
+                   MATCH (p)-[:ACTED_IN]->(m)
+                   RETURN p, m LIMIT 3 | MATCH (:Movie{title:'The Matrix'})<-[:ACTED_IN]-(p:Person)
+CALL {
+    WITH p
+    MATCH (p)-[:ACTED_IN]->(m)
+    RETURN m
+    LIMIT 3
+}
+
+RETURN p, m",articles\modules\ROOT\pages\limiting-match-results-per-row.adoc,1,high,,
+192,Linkurious bolt configuration,Default Linkurious configuration contains the following snippet in the `production.json` configuration file:,security,,articles\modules\ROOT\pages\linkurious-bolt-configuration.adoc,1,medium,,
+193,Linux Out of Memory killer,The Out Of Memory Killer or OOM Killer is a process that the linux kernel employs when the system is critically low on memory. This,performance,,articles\modules\ROOT\pages\linux-out-of-memory-killer.adoc,1,medium,,
+194,List of restricted ports in browsers,This document provides a list of ports which generate an error when browsing via Chrome. It is a super-set of ports most of which are also restricted in Mozilla Firefox,security,,articles\modules\ROOT\pages\list-of-restricted-ports-in-browsers.adoc,1,low,,
+195,Load CSV data in Neo4j from CSV files on Amazon S3 Bucket,"Neo4j provides LOAD CSV cypher command to load data from CSV files into Neo4j or access CSV files via HTTPS, HTTP and FTP.",cypher,"LOAD CSV WITH HEADERS FROM ""https://rohank.s3.amazonaws.com/actors.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=REDACTED&X-Amz-Date=20190404T215301Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=REDACTED"" as row return count(row)",articles\modules\ROOT\pages\load-csv-data-from-csv-files-on-aws-s3-bucket.adoc,1,high,,
+196,Lock Manager Differences Explained,Work in Progress,performance,,articles\modules\ROOT\pages\lock-manager-differences-explained.adoc,1,low,,
+197,Long GC Pauses caused by application code calling `System.gc()`,"When investigating the cause of long garbage collection cycles, it is often useful to enable GC logging.",performance,,articles\modules\ROOT\pages\long-pauses-caused-by-application-code-calling-system-gc.adoc,1,medium,,
+198,Manually Merging neo4j-wrapper.conf into neo4j.conf in Neo4j 3.1,"Neo4j 3.1 takes the configuration changes made in Neo4j 3.0 a step further, and ships with a single configuration file: `conf/neo4j.conf`. This is the result of merging the contents of `conf/neo4j.con",security,,articles\modules\ROOT\pages\manually-merging-neo4jwrapperconf-into-neo4jconf-in-neo4j-31.adoc,1,low,,
+199,Manually Migrating Configuration Settings from Neo4j 2.x to Neo4j 3.x,One of the major changes in Neo4j 3.0 was the reworking of configuration files and the individual configuration setting naming convention to make it more consitent and managable going forward. A confi,security,,articles\modules\ROOT\pages\manually-migrating-configuration-settings-from-neo4j-2x-to-neo4j-3x.adoc,1,medium,,
+200,Migrating Explicit Lucene Indexes to Native Schema Indexes,"Given that there are still some customers on the older Neo4j releases that utilize legacy/explicit indexes, we will discuss a few pointers here on how to convert these indexes to native schema indexes",modeling,,articles\modules\ROOT\pages\migrating-explicit-lucene-indexes-to-native-schema-indexes.adoc,1,medium,,
+201,How do I establish a simple HTTP Server local to my Neo4j Instance to serve CSV files,When using https://neo4j.com/docs/cypher-manual/current/functions/load-csv/[LOAD CSV] one can define,cypher,load csv from 'http://192.168.97.215:8000/movies.csv' as row,articles\modules\ROOT\pages\minimalistic-local-webserver-for-load-csv.adoc,1,high,,
+202,Mitigating Causal Cluster re-elections caused by high GCs,"This article describes the effects of JVM stop-the-world GC pauses, on a causal cluster. A brief introduction to garbage collection,",performance,,articles\modules\ROOT\pages\mitigating-causal-cluster-re-elections-caused-by-high-gcs.adoc,1,medium,,
+203,Retired: Modifying the http.log Format on Neo4j 2.x,"Prior to Neo4j 3.0, the http.log format was controlled by `neo4j-http-logging.xml`. The default format works fine, except when you need",cypher,,articles\modules\ROOT\pages\modifying-the-httplog-format-on-neo4j-2x.adoc,1,medium,,
+204,Run multiple Causal Clusters locally using Docker,It's rather easy to run multiple causal clusters on the same server or machine. You need to ensure:,security,,articles\modules\ROOT\pages\multiple-causal-clusters-using-docker.adoc,1,low,,
+205,Neo4j 3.5 to 4.x Migration Help and Resources,This guide is designed to provide key details and links on various 3.5 to 4.x migration resources.,security,,articles\modules\ROOT\pages\neo4j-3dot5-to-4-dot-x-migrations-best-practices.adoc,1,medium,,
+206,Neo4j 4.2.x Security Vulnerability Fixed in Release 4.2.8,Neo4j 4.2.x Enterprise and Aura Cloud before 2021-06-18,security,,articles\modules\ROOT\pages\neo4j-4-2-x-sec-vuln-fix.adoc,1,medium,,
+207,"neo4j-admin load causes ""Not a valid Neo4j archive""","When using `neo4j-admin load` for loading a .dump file, following error is observerd:",security,,articles\modules\ROOT\pages\neo4j-admin-load-causes-not-a-valid-neo4j-archive.adoc,1,low,,
+208,Neo4j & JDBC: the Neo4j JDBC Driver vs. BI Connector,"This page describes the connection between JDBC and Neo4j,",cypher,,articles\modules\ROOT\pages\neo4j-and-jdbc.adoc,1,medium,,
+209,Neo4j behaviour when running out of disk space (3.4+),"Following the improvements on the recovery process after an instance runs out of disk space introduced in v3.4.0, this article aims to offer a view on the behaviour of Neo4j when this happens.",security,,articles\modules\ROOT\pages\neo4j-behaviour-when-running-out-of-disk-space-3-4.adoc,1,low,,
+210,Neo4j's commit process explained,This article will try to guide you through Neo4j's commit and replication processes both for single instances and causal clusters.,security,,articles\modules\ROOT\pages\neo4j-commit-process-explained.adoc,1,low,,
+211,Neo4j current transaction commit process order,"Transactions in Neo4j use a read-committed isolation level, which means they will see data as soon as it has been committed and will",security,,articles\modules\ROOT\pages\neo4j-current-transaction-commit-process-order.adoc,1,medium,,
+212,Neo4j Desktop password change failure,"This document provides info and resolution for the error message on a clean install of Desktop 1.0.2x,",cypher,,articles\modules\ROOT\pages\neo4j-desktop-password-change-failure.adoc,1,medium,,
+213,Bulk Import / Backups into running 4.0 instances,Neo4j 4.0 allows for multiple running databases. You can use `neo4j-admin import` or `neo4j-admin restore` to import or restore a database into a new database on a running 4.0 instance.,security,"neo4j> :use system
+neo4j> create database dataload1
+neo4j> show databases
+neo4j> :use dataload1
+neo4j> MATCH (n:STORE) return n limit 3; | neo4j> :use system
+neo4j> create database dataload2
+neo4j> show databases
+neo4j> :use dataload2
+neo4j> MATCH (n:STORE) return n limit 3;",articles\modules\ROOT\pages\neo4j-import-into-running-4-0-instance.adoc,1,low,,
+214,Neo4j specific http request user agent strings,"For those https://neo4j.com/labs/apoc/[APOC] commands that retrieve data using HTTP/HTTPS,",cypher,,articles\modules\ROOT\pages\neo4j-specific-http-request-user-agent-strings.adoc,1,medium,,
+215,Neo4j Streams - Kafka Integration - List of Must Gather for Troubleshooting,"When troubleshooting issues on Neo4j Streams, use the below list of must gather information points to help investigating.",security,,articles\modules\ROOT\pages\neo4j-streams-kafka-integration-list-of-mustgather-for-troubleshooting.adoc,1,medium,,
+216,Neo4j: Convert string to date,"Neo4j 3.4 saw the https://neo4j.com/blog/neo4j-graph-database-3-4-ga-release/[introduction of the temporal date type^], and while there is now powerful in built functionality, converting strings to da",cypher,"RETURN date(""2019-06-04"") AS date | RETURN date(""04/06/2019"") AS date",articles\modules\ROOT\pages\neo4j-string-to-date.adoc,1,high,,
+217,Neo4j Supported Versions,### Latest Neo4j Database Enterprise Edition,security,,articles\modules\ROOT\pages\neo4j-supported-versions.adoc,1,low,,
+218,Number of open files,GNU/Linux and Mac OS operating systems impose an upper limit on the number of concurrent files a user may have open.,security,,articles\modules\ROOT\pages\number-of-open-files-on-linux.adoc,1,low,,
+219,Parsing json query logs,There are times when we have to examine a query log in order to find longest running queries and/or other problem queries such as those with missing indexes or when not using parameters appropriately.,cypher,,articles\modules\ROOT\pages\parsing-json-query-logs.adoc,1,medium,,
+220,Parsing of quotes for LOAD CSV and/or Import,When using http://neo4j.com/docs/developer-manual/current/cypher/clauses/load-csv/[LOAD CSV] or,cypher,"LOAD CSV WITH HEADERS FROM ""file:///hr.csv"" AS row FIELDTERMINATOR ','  CREATE (n:Staff { staffid: toInt(row.id), staff_name: row.name}); | neo4j> match (n) return n;
++",articles\modules\ROOT\pages\parsing-of-quotes-for-load-csv-and-or-import.adoc,1,high,,
+221,Pass Temporal Objects as Parameters,"With the support of datetime types in Neo4j, users might wonder how or if it works to transport those types along with other data types via the drivers.",cypher,"CREATE (p:Person { name: 'Bob', birthday: date(2018,01,01) })",articles\modules\ROOT\pages\pass-temporal-objects-parameters.adoc,1,high,,
+222,Performing match intersection,Match intersection is a common use case where you're searching for nodes which have relationships to all of a set of input nodes.,cypher,"WITH ['Keanu Reeves', 'Hugo Weaving', 'Emil Eifrem'] as names
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WHERE p.name in names
+RETURN m | WITH ['Keanu Reeves', 'Hugo Weaving', 'Emil Eifrem'] as names
+MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WHERE p.name in names
+WITH m, size(names) as inputCnt, count(DISTINCT p) as cnt
+WHERE cnt = inputCnt
+RETURN m",articles\modules\ROOT\pages\performing-match-intersection.adoc,1,high,,
+223,Performing pattern negation to multiple nodes,Some use cases require matching to nodes which aren't connected to any of some other set of nodes.,cypher,"(:Recipe)-[:INCLUDES]->(:Ingredient) | MATCH (excluded:Ingredient)
+WHERE excluded.name in $excludedIngredients
+MATCH (r:Recipe)
+WHERE NOT (r)-[:INCLUDES]->(excluded)
+RETURN r",articles\modules\ROOT\pages\performing-pattern-negation.adoc,1,high,,
+224,"Getting ""Permission Denied"" errors after using neo4j-admin commands","If you have leveraged Debian or RPM Packages to install Neo4j on Linux (or used one of the Public Cloud Marketplace offerings), you need to be careful of file and folder permissions.",security,,articles\modules\ROOT\pages\permission-denied-errors-after-neo4j-admin.adoc,1,low,,
+225,Planning Data Center Migration,The following KB describes the process that you can use utilizing backup (or Read-Replicas) in order to migrate (and/or upgrade) from one datacenter(DC1) to another(DC2) in a rolling fashion with no z,security,,articles\modules\ROOT\pages\planning-data-center-migration.adoc,1,low,,
+226,Post-UNION processing,"Cypher does not allow further processing of `UNION` or `UNION ALL` results, since `RETURN` is required in all queries of the union.",cypher,"CALL {
+  MATCH (movieOrPerson:Movie) RETURN movieOrPerson
+  UNION
+  MATCH (movieOrPerson:Person) RETURN movieOrPerson
+}
+WITH movieOrPerson
+... | MATCH (m:Movie {title:'The Matrix'})
+CALL {
+    WITH m
+    MATCH (m)<-[:ACTED_IN]-(p)
+    RETURN p
+    UNION
+    WITH m
+    MATCH (m)<-[:DIRECTED]-(p)
+    RETURN p
+}
+RETURN p.name as name
+ORDER BY name ASC",articles\modules\ROOT\pages\post-union-processing.adoc,1,high,,
+227,Preserving the Neo4j pagecache across database restarts,"Commencing with Neo4j 3.4 and as a result of https://github.com/neo4j/neo4j/pull/10957[PR 10957], and when using Neo4j Enterprise the",performance,,articles\modules\ROOT\pages\preserving-the-neo4j-pagecache-across-database-restarts.adoc,1,medium,,
+228,Proper File Permissions on Neo4j Server,"When installing Neo4j Server, keep in mind that the `bin/neo4j` executable will need to be run by some OS system user, and that user will need write permissions to some files/directories, specifically",security,,articles\modules\ROOT\pages\proper-file-permissions-on-neo4j-server.adoc,1,low,,
+229,Properly escaping input data for neo4j-import,"`neo4j-import` is intended to populate a new, empty database.",security,"neo4j> match (n:Movie) return n.line;
++ | neo4j> match (n:Movie) return n;
++",articles\modules\ROOT\pages\properly-escaping-input-data-for-neo4j-import.adoc,1,low,,
+230,Protecting against Cypher Injection,"Cypher Injection is a way for maliciously formatted input to jump out of its context, and by altering the query itself, hijack the query and perform unexpected operations on the database.",cypher,"CREATE (s:Student)
+SET s.name = 'Robby' WITH true as ignored MATCH (s:Student) DETACH DELETE s; //'; | CREATE (s:Student)
+SET s.name = $studentName",articles\modules\ROOT\pages\protecting-against-cypher-injection.adoc,1,high,,
+231,Protecting against Server Side Request Forgery (SSRF),Server-side request forgery (SSRF) vulnerabilities let an attacker send crafted requests from the back-end server of a vulnerable web application. Criminals usually use SSRF attacks to target internal,cypher,,articles\modules\ROOT\pages\protecting-against-ssrf.adoc,1,medium,,
+232,How to Configure Proxy in Neo4j Desktop,Organizations have proxy settings in order to access the internet or external websites.,security,,articles\modules\ROOT\pages\proxy-setting-for-neo4j-desktop.adoc,1,medium,,
+233,Query to kill transactions that take longer than X seconds and doesn't contain certain keywords,In Neo4j we currently have the configuration property referred to as execution guard:,cypher,"call dbms.listQueries() yield query, elapsedTimeMillis, queryId, username
+where  NOT query contains toLower(“LOAD"")
+and elapsedTimeMillis >30000
+with query, collect(queryId) as q
+call dbms.killQueries(q) yield queryId
+return query, queryId | call dbms.listQueries() yield query, elapsedTimeMillis, queryId, username
+where  NOT username contains toLower(""neo4j"")
+and elapsedTimeMillis >30000
+with query, collect(queryId) as q
+call dbms.killQueries(q) yield queryId
+return query, queryId",articles\modules\ROOT\pages\query-to-kill-transactions-that-take-longer.adoc,1,high,,
+234,Recommendations for recovery upon Out Of Memory error,It is possible to configure the JVM (Java Virtual Machine) such that upon encountering an OOM (Out-Of-Memory) error it will force an exception and crash or simply shut down the application. Taking act,performance,,articles\modules\ROOT\pages\recommendations-for-recovery-upon-out-of-memory-error.adoc,1,medium,,
+235,Recovering Local Bloom Perspectives,When Bloom is connected to a Neo4j server that does not have the Bloom plugin installed it stores perspectives locally in the Web Browser or Neo4j Desktop's local storage.,security,,articles\modules\ROOT\pages\recovering-local-bloom-perspectives.adoc,1,medium,,
+236,Recreating Indexes and Constraints on 3.5,This article describes the process to drop and recreate all indexes and constraints on 3.5.x.,performance,"CALL db.constraints() YIELD description
+RETURN 'DROP ' + description + '; CREATE ' + description + ';' | CALL db.indexes() YIELD description,type
+WHERE type='node_label_property'
+RETURN 'DROP ' + description + '; CREATE ' + description + ';'",articles\modules\ROOT\pages\recreating-indexes-and-constraints-on-35.adoc,1,high,,
+237,Redirect Neo4j logs to sysout (using rsyslog),"Sometimes - due to organizational requirements, security, indexing or plain convenience - we want to output all of our application logs to Linux's sysout. While Neo4j doesn't offer this feature, we ca",performance,,articles\modules\ROOT\pages\redirect-neo4j-logs-to-sysout-using-rsyslog.adoc,1,medium,,
+238,Requirement makes database unavailable: Database available --- INITIALIZED diagnostics START ---,"When running `neo4j-admin backup`, the debug.log shows a message that appears to indicate that the database restarted; however, this is not the case.",security,,articles\modules\ROOT\pages\requirement-makes-database-unavailable-database-available-initialized-diagnostics-start.adoc,1,low,,
+239,Resetting query cardinality,"As queries execute, they build up result rows. Cypher executes operations per-row.",cypher,"MATCH (p:Person)
+WHERE (p)-[:ACTED_IN]->(:Movie)
+SET p:Actor
+
+CREATE (:Movie{title:'The Animatrix'}) | MATCH (p:Person)
+WHERE (p)-[:ACTED_IN]->(:Movie)
+SET p:Actor
+
+WITH DISTINCT 1 AS ignored
+CREATE (:Movie{title:'The Animatrix'})",articles\modules\ROOT\pages\resetting-query-cardinality.adoc,1,high,,
+240,Resolve Port Conflicts in Neo4j Desktop,"Occasionally upon upgrade or re-install, Neo4j Desktop may throw a repetitive port conflict exception for ports 7474, 7687,",security,,articles\modules\ROOT\pages\resolve-port-conflicts-in-neo4j-desktop.adoc,1,low,,
+241,"How to resolve Python Bolt Driver when executed gives an error ""(""Failed to establish connection to {!r}"".format(address))""",Take the example of Python with the latest Bolt driver 1.2.,security,,articles\modules\ROOT\pages\resolve-python-bolt-driver-error-connection.adoc,1,medium,,
+242,Resolve TLS certificate errors,TLS encryption is required everywhere.,security,,articles\modules\ROOT\pages\resolve-tls-certificate-errors.adoc,1,low,,
+243,Running copy store tool on windows,"The copy store utilities is a set of tools to compact, copy, fix and analyse Neo4j stores. You might already know this but if not, you can",performance,,articles\modules\ROOT\pages\running-copy-store-tool-on-windows.adoc,1,medium,,
+244,Running Docker as Non-Root User,"When running Neo4j Docker, it will run as `neo4j` user inside the container. But to run docker as a different user one can specify the `--user` argument.",security,,articles\modules\ROOT\pages\running-docker-as-nonroot-user.adoc,1,low,,
+245,Sending Neo4j messages to a Slack channel,"Although not specific to Neo4j and this knowledge base document is provided as a convenience, if your environment has a",security,,articles\modules\ROOT\pages\sending-neo4j-message-to-slack-channel.adoc,1,medium,,
+246,Setting Max Open File Limits on Mac OSX,This document provides a process for setting soft and hard max open file limits on MAC OSX. Each thread created by a user,security,,articles\modules\ROOT\pages\setting-max-open-file-limits-on-osx.adoc,1,low,,
+247,How to set up SSL communcation when running Neo4j within a Docker Container,"Neo4j 3.2 added a Unified SSL Framework to setup secure connections for Bolt, HTTPS and Intra-Cluster Encryption.  Details on this",security,,articles\modules\ROOT\pages\setting-up-ssl-with-docker.adoc,1,low,,
+248,Setup Neo4j Service to run with different service ID,"By default when neo4j is installed as an RPM via yum or apt-get, it creates a user `neo4j` and group `neo4j` and runs as `neo4j` user.",security,,articles\modules\ROOT\pages\setup-neo4j-service-with-different-service-id.adoc,1,low,,
+249,Setup Routing Policies for Different User Types To Direct them to Different Servers,There is a Causal Cluster Setup with 3 Cores and 1 Read Replica. There are 2 user groups - OLTP users and OLAP users.,security,,articles\modules\ROOT\pages\setup-routing-policies-for-different-user-types.adoc,1,low,,
+250,Shared vs Exclusive Transaction locks,This document describes the meaning of a shared lock as seen by transactions and the difference between a shared and exclusive lock.,performance,"MATCH (p:Person)
+WHERE p.name = 'Tom Hanks'
+set p.award= 'Oscar' | MATCH (p:Person)
+WHERE p.name = 'Tom Hanks'
+SET p.award = 'Oscar'
+with p
+call apoc.util.sleep(200000)
+RETURN p.award",articles\modules\ROOT\pages\shared-vs-exclusive-transaction-locks.adoc,1,high,,
+251,Solve dependency issues,There are multiple ways to include neo4j artifacts.,security,,articles\modules\ROOT\pages\solve-dependency-issues.adoc,1,medium,,
+252,How to import a file with LOAD CSV that has a space in file name?,When you try to import data from a file using LOAD CSV where the filename containing spaces for example you get the following error:,cypher,"load csv from ""file:///test copy.csv"" as row return row | load csv from ""file:///test%20copy.csv"" as row return row",articles\modules\ROOT\pages\space-in-import-filename-for-load-csv.adoc,1,high,,
+253,How to specify a separate debug.log for the backup process?,When running `neo4j-admin backup` on a running Neo4j instance the backup logs are also written into the existing Neo4j instance `debug.log` and can get confusing as to which line items in the debug.lo,security,,articles\modules\ROOT\pages\specify-separate-debug-log-for-backup.adoc,1,low,,
+254,Split between APOC Core and APOC Extended,"With the release of Neo4j 5, the APOC library has been split into two separate packages: https://neo4j.com/docs/apoc/5/[APOC Core] and https://neo4j.com/labs/apoc/5/[APOC Extended].",security,,articles\modules\ROOT\pages\split-between-apoc-core-and-apoc-extended.adoc,1,medium,,
+255,Startup failure due to misconfigured unmanaged extensions or plugins,"Occasionally, following upgrades, one might encounter Neo4j server initialisation failure due to an exception similar to:",security,,articles\modules\ROOT\pages\startup-failure-misconfigured-unmanaged-extensions-or-plugins.adoc,1,medium,,
+256,Stopping the Neo4j docker image in order to restore from a backup,"In a https://neo4j.com/docs/operations-manual/current/installation/docker/[`neo4j docker installation`], the https://neo4j.com/docs/operations-manual/current/backup-restore/restore-backup/#restore-bac",security,,articles\modules\ROOT\pages\stopping-and-restoring-neo4j-docker-image.adoc,1,low,,
+257,Store Format Versions Reference Guide,"In some situations, you may see a log message or exception that refers to a store format version, and it is not clear",security,,articles\modules\ROOT\pages\store-format-versions.adoc,1,low,,
+258,"Explantion of ""storeId is different from this machine"" error","If you encounter a ""Failed to serve TxPullRequest for ... storeId xxxxxx because that storeId is different from this machine with Store..."" in your `$NEO4J_HOME/logs/debug.log` similar to:",security,,articles\modules\ROOT\pages\storeid-is-different-from-this-machine.adoc,1,medium,,
+259,TLS/SSL Configuration for Specific Ciphers,"Per documentation: `dbms.ssl.policy.<policyname>.ciphers` is by default set to the Java platform default allowed cipher suites, which can also be explicitly set to any specific ciphers (separated by """,security,,articles\modules\ROOT\pages\tls-ssl-configuration-for-specific-ciphers.adoc,1,low,,
+260,Troubleshooting Connection Issues in Neo4j Browser and Cypher Shell,"This page describes common issues users may encounter in connecting Neo4j Browser or cypher-shell to a Neo4j database,",cypher,,articles\modules\ROOT\pages\troubleshooting-connection-issues.adoc,1,medium,,
+261,Troubleshooting Neo4j Desktop Issues on Linux,This page describes common issues users may encounter when running Neo4j Desktop on Linux.,security,,articles\modules\ROOT\pages\troubleshooting-neo4j-desktop-linux.adoc,1,low,,
+262,Tuning GC algorithms,There are several Garbage Collection algorithms available in Java.,performance,,articles\modules\ROOT\pages\tuning-gc-algorithms.adoc,1,medium,,
+263,java.lang.OutOfMemoryError: unable to create new native thread,"When a client application establishes a session with a Neo4j server via the bolt or bolt+routing protocols, the server allocates a thread",performance,,articles\modules\ROOT\pages\unable-to-create-new-native-thread.adoc,1,medium,,
+264,Understanding aggregations on zero rows,Aggregations in Cypher can be tricky in some cases.,cypher,"MATCH (person:Person)
+WHERE person.nonExistentProperty = 123
+// after the WHERE, there are 0 rows
+RETURN count(person) as count
+// but when we apply the count(), we get a single row with 0 | MATCH (person:Person)
+WHERE person.nonExistentProperty = 123
+// after the WHERE, there are 0 rows
+RETURN collect(person) as people
+// but when we apply the collect(), we get a single row with []",articles\modules\ROOT\pages\understanding-aggregations-on-zero-rows.adoc,1,high,,
+265,Understanding causal cluster quorum and cluster recovery,"Several major causal cluster operations require a majority of cluster members to be online, a majority quorum.",security,,articles\modules\ROOT\pages\understanding-causal-cluster-quorum-and-cluster-recovery.adoc,1,low,,
+266,Understanding causal cluster size scaling,"The ability to safely scale down the size of a causal cluster affords us more robustness for instance failures, provided we maintain quorum as the failures take place.",security,,articles\modules\ROOT\pages\understanding-causal-cluster-size-scaling.adoc,1,low,,
+267,Tuning Cypher queries by understanding cardinality,Cardinality issues are the most frequent culprit in slow or incorrect Cypher queries.,cypher,"MATCH (movie:Movie {title:'The Matrix'})<-[:ACTED_IN]-(actor) | MATCH (movie:Movie {title:'The Matrix'})<-[:ACTED_IN]-(actor)
+MATCH (actor)-[:ACTED_IN]->(otherMovie)
+...",articles\modules\ROOT\pages\understanding-cypher-cardinality.adoc,1,high,,
+268,Understanding Neo4j's data on disk,Neo4j database files are persisted to storage for long term durability. Data related files located in data/databases/graph.db (v3.x+) by default in the Neo4j data directory. Below will give you an ide,performance,,articles\modules\ROOT\pages\understanding-data-on-disk.adoc,1,medium,,
+269,Understanding Database Growth,The easiest way to determine the size of your graph is through the filesystem and summing up the size of the files named `\*store.db*`.,security,"USING PERIODIC COMMIT 50000
+LOAD CSV WITH HEADERS FROM 'file:///person.csv' AS row
+CREATE (:Person { id: row.id}  );",articles\modules\ROOT\pages\understanding-database-growth.adoc,1,high,,
+270,Understanding how MERGE works,The `MERGE` clause ensures that a pattern exists in the graph.,cypher,"(:Student)-[:ENROLLED_IN]->(:Class)
+(:Student)-[:EARNED]->(:ReportCard)
+(:Class)-[:FOR_TERM]->(:Term) | MERGE (student:Student{id:123})-[:ENROLLED_IN]->(class:Class{name:'Cypher101'})",articles\modules\ROOT\pages\understanding-how-merge-works.adoc,1,high,,
+271,Understanding logical logs and effects of parameters keep_logical_logs and logical_log_rotation_threshold,Neo4j maintains logical logs for incremental backup and cluster consistency.,security,,articles\modules\ROOT\pages\understanding-logical-logs-and-effects-of-parameters-keep-logical-logs-and-logical-log-rotation-threshold.adoc,1,low,,
+272,Understanding memory configurations for neo4j-admin backup,When using https://neo4j.com/docs/operations-manual/current/backup/perform-backup/#backup-commands[`bin\neo4j-admin backup`] to backup,performance,,articles\modules\ROOT\pages\understanding-memory-configurations-for-neo4j-admin-backup.adoc,1,medium,,
+273,Understanding memory consumption,"So you have configured Neo4j to use 4GB of heap and 6GB of page cache and sat back relaxed, thinking the Java process would not go above 10GB in your 12GB machine only to realise that Neo4j had an OOM",performance,,articles\modules\ROOT\pages\understanding-memory-consumption.adoc,1,medium,,
+274,Understanding Neo4j Query Plan Caching,This article is based on the behavior of Neo4j 2.3.2.,cypher,,articles\modules\ROOT\pages\understanding-neo4j-query-plan-caching.adoc,1,medium,,
+275,Understanding non-existent properties and working with nulls,"In Neo4j, since there is no table schema or equivalent to restrict possible properties, non-existence and null are equivalent for node and relationship properties.",cypher,"MATCH (p:Person)
+WHERE p.id = $personId
+RETURN NOT EXISTS(p.email) | MATCH (p:Person)
+WHERE p.id = $personId
+RETURN p.email IS NULL",articles\modules\ROOT\pages\understanding-non-existent-properties-and-null-values.adoc,1,high,,
+276,Understanding the Query Plan Cache,When a Cypher statement is first submitted Neo4j will attempt to determine if the query is in the plan cache before planning it.,cypher,"match (n) return count(n);
+MATCH (n) return COUNT(n); | MATCH (n) return COUNT(n);
+MATCH (n) return      COUNT(n);
+
+MATCH (n)
+return COUNT(n);",articles\modules\ROOT\pages\understanding-the-query-plan-cache.adoc,1,high,,
+277,Understanding transaction and lock timeouts,One way to handle runaway queries is to impose a time limit that will terminate a query when exceeded.,cypher,"CALL apoc.cypher.runTimeboxed(""MATCH (n:Person{name:'Keanu Reeves'})-[*]-(other)
+ RETURN count(*) as allPathsCount"",
+ {}, 20000)",articles\modules\ROOT\pages\understanding-transaction-and-lock-timeouts.adoc,1,high,,
+278,Updating a node but returning its state from before the update,"Some use cases require updating node (or relationship) properties, but returning the node (or relationship) as it was prior to the update.",cypher,"MATCH (p:Person{name:'Keanu Reeves'})
+WITH p, p {.*} as snapshot
+SET p.name = 'The One'
+RETURN snapshot | MATCH (p:Person{name:'Keanu Reeves'})
+WITH p, p {.*, .lastUpdated} as snapshot
+SET p.lastUpdated = TIMESTAMP()
+RETURN snapshot",articles\modules\ROOT\pages\updating-a-node-but-returning-its-state-from-before-the-update.adoc,1,high,,
+279,Upgrading your Causal Cluster from 3.1.x to 3.2.x,"This article outlines possible steps to upgrade your Neo4j 3.1.2+ Causal Cluster to 3.2.2. For this upgrade path, Neo4j does not support rolling upgrades, so downtime is required to complete the proce",security,,articles\modules\ROOT\pages\upgrading-causal-cluster.adoc,1,low,,
+280,Upgrading to Neo4j 3.0 Enterprise Step-by-Step - Linux,Neo4j 3.0 is a major release that includes both a directory structure reorganization and a configuration file/parameter name overhaul.,security,,articles\modules\ROOT\pages\upgrading-to-neo4j-3-0-enterprise-step-by-step-linux.adoc,1,low,,
+281,Upstream strategy behaviour change,"Starting with version 3.4, we changed in the behaviour of how instances sync with the Leader. This change can potentially affect the",security,,articles\modules\ROOT\pages\upstream-strategy-behaviour-change.adoc,1,medium,,
+282,Use Java Runtime 11 with Neo4J 3.5.x,"Neo4j 3.5.x supports Java 11 as runtime, however custom code should still be compiled against Java 8.",security,,articles\modules\ROOT\pages\use-java-runtime-11-with-neo4j-3-5-x.adoc,1,low,,
+283,Useful Cypher statements for suspending and reactivating users,Commencing with Neo4j 3.1 and implementaion of https://neo4j.com/docs/operations-manual/current/security/authentication-authorization/native-user-role-management/[native database users],cypher,"call dbms.security.listUsers() yield username, flags 
+with username,flags 
+where 'is_suspended' in flags
+return username | // users with no  is_suspended flag and build the statement to activate the user and not force a password change
+call dbms.security.listUsers() yield username, flags with username, flags 
+where not 'is_suspended' in flags  
+return 'call dbms.security.activateUser(\'' + username + '\',false);'",articles\modules\ROOT\pages\useful-cypher-statements-for-suspending-and-reactivating-users.adoc,1,high,,
+284,Using apoc.load.jsonParams to load data from Zendesk into Neo4j to learn about article subscribers,The following document describes how to utilize the https://developer.zendesk.com/rest_api/docs/core/introduction[Zendesk API],security,"create index on :Section(id);
+create index on :User(id);
+create index on :Organization(id);
+
+// get all sections
+CALL apoc.load.jsonParams(""https://your_domain.zendesk.com/api/v2/help_center/sections.json"",{Authorization:""Basic base64Encoded_username:password""},null)
+  yield value as sectionvalue
+  with sectionvalue
+  unwind sectionvalue.sections as section_item
+    Merge (n:Section {id:section_item.id,name:section_item.name, created_at:section_item.created_at, updated_at:section_item.updated_at,url:section_item.html_url})
+    with section_item.id as secid
+    // foreach section then find the subscribers
+    CALL apoc.load.jsonParams(""https://your_domain.zendesk.com/api/v2/help_center/sections/""+secid+""/subscriptions.json?per_page=200"",{Authorization:""Basic base64Encoded_username:password""},null)
+       yield value as subscribervalue
+       with subscribervalue, secid
+       unwind subscribervalue.subscriptions as subscription_item
+            // create the relationship from the User to the Secction through the :Follows relationship
+            match (s:Section {id:secid}) with s,subscription_item
+            merge (n:User {id: subscription_item.user_id})
+            merge (n)-[:Follows {subscribed_on: subscription_item.created_at}]->(s)
+            with subscription_item.user_id as s_userid
+            CALL apoc.load.jsonParams(""https://your_domain.zendesk.com/api/v2/users/""+s_userid+"".json"",{Authorization:""Basic base64Encoded_username:password""},null)
+                 yield value as userRecord
+               with userRecord, s_userid
+               unwind userRecord.user as uid
+               match (n:User {id:s_userid})
+               set
+                     n.name=uid.name,
+                     n.email=uid.email,
+                     n.created_at=uid.created_at,
+                     n.last_login=uid.last_login_at,
+                     n.url=uid.url;
+
+match (n:User) where exists(n.organization_id)
+      with n,n.organization_id as organization_id
+      CALL apoc.load.jsonParams(""https://your_domain.zendesk.com/api/v2/organizations/""+organization_id+"".json"",{Authorization:""Basic base64Encoded_username:password""},null)
+      yield value as orgRecord
+      unwind orgRecord.organization as orgid
+      with n,orgid
+      merge (o:Organization {id: orgid.id, name: orgid.name, created_at: orgid.created_at})
+      merge (n)-[:IS_MEMBER_OF_ORG]->(o); | match     (n:Section) 
+return     n.name,
+           size (  (n)<-[:Follows]-() ) as subscribers
+order by   subscribers desc;",articles\modules\ROOT\pages\using-apoc-load-jsonparams-to-load-data-from-zendesk-into-neo4j-to-learn-about-article-subscribers.adoc,1,high,,
+285,Using APOC to parse JSON results from Trello API,"Prior to Neo4j 3.0, if you wanted to parse the JSON results from a call to a Web API, it would require you use one of the",cypher,"WITH ""https://api.trello.com/1/member/me/actions?filter=createCard&limit=1000&key=00981709d8fa49b9fb3c66f41178c14h&token=06128ee9bb10787d6fdee4942c12b5de5f39be11794fcb0604e072e1940475e2"" AS url
+CALL apoc.load.json(url) YIELD value AS action
+WITH action, action.memberCreator AS m, action.data AS d
+MERGE (u:User {id:m.id}) ON CREATE SET u.initials = m.initials, u.name = m.fullname, u.user = m.username
+MERGE (b:Board {id: d.board.id}) ON CREATE SET b = d.board
+MERGE (c:Card {id: d.card.id}) ON CREATE SET c = d.card
+MERGE (u)-[r:CREATED]->(c) ON CREATE SET r.id = action.id, r.date_created=apoc.date.parse(action.date,'s',""yyyy-MM-dd'T'HH:mm:ss'Z'"")
+MERGE (c)-[:IN_BOARD]->(b)
+RETURN count(*); | MATCH (u:User)-[r:CREATED]->(c:Card)-[r2:IN_BOARD]->(b:Board) 
+RETURN u.user AS Author, r.date_created,c.name AS CardName ,b.name AS BoardName",articles\modules\ROOT\pages\using-apoc-to-parse-json-results-from-trello-api.adoc,1,high,,
+286,Using apt to download a specific Neo4j debian package,"By default, using `apt-get` to install Neo4j allows you to grab the current and previous stable releases.",security,,articles\modules\ROOT\pages\using-apt-get-to-download-a-specific-neo4j-debian-package.adoc,1,low,,
+287,Using AWS CLI to upload/download files to Amazon S3 bucket,If one has installed the https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html[AWS CLI],security,,articles\modules\ROOT\pages\using-aws-cli-to-upload-download-files-to-amazon-s3-buck.adoc,1,medium,,
+288,Using Cypher and APOC to move a property value to a label,Commencing with Neo4j 3.0 and the introduction of stored procedures as well as link:https://github.com/neo4j-contrib/neo4j-apoc-procedures[APOC^] one can utilize the stored procedure link:https://neo4,cypher,"// create a node with property studio
+create (n:Movies {name: 'A Few Good Men', studio: 'Warner Brothers'}) | // move the 'studio' property to a label and remove it as a property
+MATCH (n:Movies) 
+call apoc.create.addLabels([ id(n) ], [ n.studio ]) yield node 
+with node 
+remove node.studio
+return node",articles\modules\ROOT\pages\using-cypher-and-apoc-to-move-a-property-value-to-a-label.adoc,1,high,,
+289,Using Cypher to generate Cypher statements to recreate indexes and constraints,The following can be used to extract index definitions and constraint definitions from an existing database and the resultant,cypher,"// create a schema index on :Movie(title)
+// 4.0 syntax
+create index movieTitles for (n:Movies) on (n.title); 
+//
+// or 3.x syntax and a schema index on :Person(name)
+create index on :Person(name);
+//
+// create a constraint on :Movie such that no 2 Movies have the same tagline
+create constraint on (n:Movie) assert (n.tagline) is unique; | neo4j> call db.indexes();
++",articles\modules\ROOT\pages\using-cypher-to-generate-cypher-statements-to-recreate-indexes-and-constraints.adoc,1,high,,
+290,Using Cypher to generate Cypher statements to recreate Users and Roles,The following can be used to extract user and role definitions from an existing database and the resultant output can be played,cypher,"//export roles
+return '//export Roles' as output
+union all
+call dbms.security.listRoles() yield role return 'call dbms.security.createRole(\'' + role + '\');' as output
+union all 
+//export users
+return '//export Users' as output
+union all
+call dbms.security.listUsers() yield username return 'call dbms.security.createUser(\'' + username + '\',\'newpassword\');' as output
+union all
+// export user to role maps
+return '//export Roles to User map' as output
+union all
+call dbms.security.listRoles() yield role,users with role,users unwind users as user return 'call dbms.security.addRoleToUser(\'' + role + '\',' + user + '\');'  as output | //export Roles
+call dbms.security.createRole('reader');
+call dbms.security.createRole('architect');
+call dbms.security.createRole('admin');
+call dbms.security.createRole('publisher');
+//export Users
+call dbms.security.createUser('neo4j_dba','newpassword');
+call dbms.security.createUser('neo4j','newpassword');
+//export Roles to User map
+call dbms.security.addRoleToUser('admin',neo4j');
+call dbms.security.addRoleToUser('admin',neo4j_dba');",articles\modules\ROOT\pages\using-cypher-to-generate-cypher-statements-to-recreate-users-and-roles.adoc,1,high,,
+291,Using explicit indexes for text search,Please note that in Neo4j 3.5 FullText search is available in Neo4j as part of Cypher stored procedures. More documentation is found here:,cypher,"match (n:Movie) 
+with n
+call db.index.explicit.addNode(""MovieTitle"",n,""title"",n.title) yield success return count(*) | call db.index.explicit.list",articles\modules\ROOT\pages\using-explicit-indexes-for-text-search-in-neo4j.adoc,1,high,,
+292,Using max() and min() while keeping items,"The aggregation functions of `max()` and `min()` are very useful, but you can sometimes find yourself fighting against Cypher's aggregation behavior for cases that should be simple.",cypher,"(:Person {name})-[:BOUGHT]->(:FoodItem {name}) | MATCH (person:Person)-[:BOUGHT]->(food:FoodItem)
+WITH person, food, count(food) as timesBought
+RETURN person, max(timesBought) as mostBoughtCount",articles\modules\ROOT\pages\using-max-and-min-while-keeping-items.adoc,1,high,,
+293,Access to the neo4j-shell in NEO4J CE 3.x,From Neo4j 3.0 access to `neo4j-shell` is no longer possible from the desktop-installers for Windows and OSX.,cypher,,articles\modules\ROOT\pages\using-neo4j-shell-neo4j-ce-3x.adoc,1,medium,,
+294,Using Python 1.7.x Driver with Neo4j 4.0,At the time of writing this article the Bolt Driver for Python has not been released for Neo4j 4.0.,security,,articles\modules\ROOT\pages\using-python-with-neo4j-ver4-0.adoc,1,medium,,
+295,Using Subqueries to Control the Scope of Aggregations,"Aggregations, such as collect() and count(), show up as `EagerAggregation` operators (with dark blue headers) in query plans.",cypher,"MATCH (movie:Movie)<-[:ACTED_IN]-(p:Person)
+RETURN movie, collect(p) as actors | CALL apoc.periodic.iterate(""
+UNWIND range(1,1000000) as id
+RETURN id
+"",
+""
+CREATE (m:Movie {id:id})
+CREATE (p:Person {id:id})
+"", {}) YIELD batches, total, errorMessages
+RETURN batches, total, errorMessages",articles\modules\ROOT\pages\using-subqueries-to-control-the-scope-of-aggregations.adoc,1,high,,
+296,Using supervisord to manage Neo4j process,"In general, running the neo4j process directly is the most common way to start and stop the neo4j server.",security,,articles\modules\ROOT\pages\using-supervisord-to-manage-neo4j-process.adoc,1,medium,,
+297,Using the ACTUAL data type with neo4j-import,"When importing data using `neo4j-admin import`, make sure to review the required CSV file structure and considerations before moving on.",security,,articles\modules\ROOT\pages\using-the-actual-data-type-with-neo4j-import.adoc,1,low,,
+298,Viewing schema data with APOC Procedures,APOC Procedures offers https://neo4j.com/labs/apoc/4.4/overview/apoc.meta/[meta procedures] to view information,modeling,"CALL apoc.meta.schema() YIELD value as schemaMap
+UNWIND keys(schemaMap) as label
+WITH label, schemaMap[label] as data
+WHERE data.type = ""node""
+UNWIND keys(data.properties) as property
+WITH label, property, data.properties[property] as propData
+RETURN label,
+property,
+propData.type as type, 
+propData.indexed as isIndexed,
+propData.unique as uniqueConstraint, 
+propData.existence as existenceConstraint | CALL apoc.meta.schema() yield value
+UNWIND apoc.map.sortedProperties(value) as labelData
+WITH labelData[0] as label, labelData[1] as data
+WHERE data.type = ""node""
+UNWIND apoc.map.sortedProperties(data.properties) as property
+WITH label, property[0] as property, property[1] as propData
+RETURN label, 
+property, 
+propData.type as type, 
+propData.indexed as isIndexed, 
+propData.unique as uniqueConstraint, 
+propData.existence as existenceConstraint",articles\modules\ROOT\pages\viewing-schema-data-with-apoc.adoc,1,high,,
+299,Warm the cache to improve performance from cold start,*Note:* For 3.5.x forward the details below are no longer applicable as Neo4j will keep record of what is in the pagecache at all times and upon restart of Neo4j the,performance,"MATCH (n)
+OPTIONAL MATCH (n)-[r]->() 
+RETURN count(n.prop) + count(r.prop); | CALL apoc.warmup.run()",articles\modules\ROOT\pages\warm-the-cache-to-improve-performance-from-cold-start.adoc,1,high,,
+300,What Works with the BI Connector,This article provides an overview of what third-party applications to expect the BI connector work with.,security,,articles\modules\ROOT\pages\what-works-with-the-bi-connector.adoc,1,medium,,
+301,"When authentication is enabled in Neo4j, how do I call the HA Status",REST API without a username/password,security,,articles\modules\ROOT\pages\when-authentication-is-enabled-in-neo4j-how-do-i-call-the-ha-status-rest-api-without-a-username-password.adoc,1,low,,
+302,When to use bookmarks,Bookmarks are part of a broader topic: *Causal consistency*.,security,,articles\modules\ROOT\pages\when-to-use-bookmarks.adoc,1,low,,
+303,Where is my neo4j.log in Ubuntu Linux?,"In most Neo4j server environments, all logs will be found in *NEO4J_HOME/logs*. However, when Neo4j is running as a service on a Ubuntu (debian)",security,,articles\modules\ROOT\pages\where-is-my-neo4jlog-in-ubuntu-linux.adoc,1,low,,
+304,Why do my deleted property keys appear?,When using the Neo4j Browser and selecting the left frame and top icon entitled `Database Information` or using the built in,security,,articles\modules\ROOT\pages\why-do-my-deleted-property-keys-appear.adoc,1,medium,,
+305,Why does my CREATE CONSTRAINT take so long to complete,"When creating a constraint, for example",cypher,"CREATE CONSTRAINT ON (n:ZipCode) ASSERT n.name IS UNIQUE; | Begin
+create (n:ZipCode {name:'94401'}) return n;",articles\modules\ROOT\pages\why-does-my-create-constraint-take-so-long-to-complete.adoc,1,low,,
+306,Why doesn't my WHERE clause work?,It can be frustrating when it seems like a WHERE clause isn't working.,cypher,"MATCH (m:Movie)
+OPTIONAL MATCH (m)<-[:WORKED_ON]-(a:Animator)
+WHERE m.releaseYear > 1999 AND a IS NOT NULL
+RETURN m, collect(a) as animators | MATCH (m:Movie)
+OPTIONAL MATCH (m)<-[:WORKED_ON]-(a:Animator)
+WITH m, a
+WHERE m.releaseYear > 1999 AND a IS NOT NULL
+RETURN m, collect(a) as animators",articles\modules\ROOT\pages\why-where-clause-does-not-filter.adoc,1,high,,
+307,Will execution_guard_enabled work in my release of Neo4j?,*Background*,security,,articles\modules\ROOT\pages\will-execution-guard-enabled-work-in-my-release-of-neo4j.adoc,1,low,,
+308,Working with streaks in Cypher,"When using Cypher for data analysis, you might have a problem where you need to identify or filter based upon some kind of streak.",cypher,"WITH [true, false, true, false, true, true, true, true, false, false, false, true, true] as games
+CALL apoc.coll.split(games, false) YIELD value
+RETURN value | WITH [true, false, true, false, true, true, true, true, false, false, false, true, true] as games
+CALL apoc.coll.split(games, false) YIELD value as winStreak
+RETURN max(size(winStreak)) as longestWinStreak",articles\modules\ROOT\pages\working-with-streaks-in-cypher.adoc,1,high,,
+309,Avoiding unintended cartesian products,Multiple disconnected MATCH clauses create a cartesian product of all matched rows. Always connect MATCH patterns or use WITH to scope variables. Instead of separate MATCH clauses for unrelated patter,cypher,"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)
+WITH a, collect(m) AS movies
+MATCH (d:Director)-[:DIRECTED]->(m2:Movie)
+WHERE m2 IN movies
+RETURN a.name, d.name",curated/error_recovery,2,high,,
+310,Fixing type mismatch in WHERE clauses,"Cypher is type-strict in comparisons. Comparing a string property to an integer literal returns no results silently. Use toInteger(), toFloat(), or toString() to coerce types. Check property types whe",cypher,"MATCH (p:Product)
+WHERE toFloat(p.price) > $minPrice
+RETURN p.name, p.price",curated/error_recovery,2,high,,
+311,Eager aggregation invalidates bindings,"Aggregation functions (count, collect, sum) in RETURN or WITH consume all previous bindings except the grouping keys. If you need to reference non-grouped variables after aggregation, include them in ",cypher,"MATCH (p:Person)-[:ACTED_IN]->(m:Movie)
+WITH p, count(m) AS movie_count
+MATCH (p)-[:DIRECTED]->(d:Movie)
+RETURN p.name, movie_count, collect(d.title) AS directed",curated/error_recovery,2,high,,
+312,Using UNWIND for list parameters,"When passing a list parameter to match multiple values, use UNWIND $list AS item before MATCH. Writing WHERE n.id IN $ids works for simple lookups but UNWIND is required when each list item needs its ",cypher,"UNWIND $names AS name
+MATCH (p:Person {name: name})-[:ACTED_IN]->(m:Movie)
+RETURN name, collect(m.title) AS movies",curated/error_recovery,2,high,,
+313,Relationship direction matters for query results,"Neo4j relationships are always directional. A query with (a)-[:KNOWS]->(b) will not match (a)<-[:KNOWS]-(b). If direction does not matter, use undirected pattern (a)-[:KNOWS]-(b). When a query returns",cypher,"MATCH (a:Person)-[:KNOWS]-(b:Person)
+WHERE a.name = $name
+RETURN b.name",curated/error_recovery,2,high,,
+314,Use RANGE indexes for equality and range queries,"RANGE indexes (the default in Neo4j 5.x) support equality, range comparisons, IN, STARTS WITH, and existence checks. Create RANGE indexes on properties used in WHERE clauses. For composite lookups, cr",performance,"CREATE INDEX product_category_price IF NOT EXISTS FOR (p:Product) ON (p.category, p.price)",curated/index_guidance,2,high,,
+315,Use TEXT indexes for CONTAINS and regex queries,"RANGE indexes do not support CONTAINS or regular expression queries. Create a TEXT index when your queries use CONTAINS, ENDS WITH, or regex matching with =~. TEXT indexes are backed by Lucene and han",performance,CREATE TEXT INDEX article_content IF NOT EXISTS FOR (a:Article) ON (a.content),curated/index_guidance,2,high,,
+316,Use VECTOR indexes for embedding similarity search,"Neo4j 5.11+ supports native vector indexes for cosine, euclidean, or dot-product similarity. Store embeddings as float arrays on nodes and create a vector index with the correct dimensions. Use db.ind",performance,"CREATE VECTOR INDEX article_embedding IF NOT EXISTS FOR (a:Article) ON (a.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 384, `vector.similarity_function`: 'cosine'}}",curated/index_guidance,2,high,,
+317,Composite indexes for multi-property lookups,"When queries frequently filter on two or more properties of the same label, create a composite index. The order of properties matters: put the most selective property first. Composite indexes support ",performance,"CREATE INDEX order_status_date IF NOT EXISTS FOR (o:Order) ON (o.status, o.created_at)",curated/index_guidance,2,high,,
+318,When NOT to create an index,Do not index low-cardinality properties like booleans: the index scan returns too many rows to be useful. Do not index properties only used in RETURN but never in WHERE. Each index adds write overhead,performance,PROFILE MATCH (p:Product) WHERE p.category = $cat RETURN p,curated/index_guidance,2,high,,
