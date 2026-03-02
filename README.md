@@ -1,6 +1,6 @@
 # GibsGraph
 
-> **Natural language queries for any Neo4j graph — automatically.**
+> **Natural language to Neo4j — query and build knowledge graphs automatically.**
 > Built by [V.Gibson](https://gibs.dev) at Gibbr AB
 
 [![CI](https://github.com/gibbrdev/gibsgraph/actions/workflows/ci.yml/badge.svg)](https://github.com/gibbrdev/gibsgraph/actions)
@@ -9,9 +9,9 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 GibsGraph connects to any Neo4j knowledge graph, auto-discovers its schema, and lets
-you ask questions in plain English. It generates Cypher automatically, retrieves the
-relevant subgraph, and returns a grounded answer — with the Cypher shown so you can
-verify what was queried.
+you ask questions in plain English — or build new graphs from unstructured text.
+It generates Cypher automatically, retrieves the relevant subgraph, and returns a
+grounded answer with the Cypher shown so you can verify what was queried.
 
 **[Changelog](CHANGELOG.md)** | **[Contributing](CONTRIBUTING.md)**
 
@@ -65,6 +65,18 @@ g = Graph("bolt://localhost:7687", password="your-password", read_only=False)
 g.ingest("Apple acquired Beats Electronics for $3 billion in 2014.", source="news")
 g.close()
 ```
+
+---
+
+## Expert knowledge graph
+
+GibsGraph ships with a curated knowledge graph of 920 Neo4j records (849 after
+quality filtering): Cypher clauses, functions, query examples, modeling patterns,
+and best practices. This expertise is bundled as JSONL — no extra setup needed.
+
+When you ask a question, the agent retrieves relevant expert knowledge to generate
+better Cypher, validate results, and avoid common mistakes. This is what separates
+GibsGraph from a raw LLM — it reasons with real Neo4j expertise, not just training data.
 
 ---
 

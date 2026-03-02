@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "gibsgraph"
 version = "0.3.5"
-description = "GraphRAG + LangGraph agent for intelligent knowledge graph reasoning over Neo4j"
+description = "Natural language to Neo4j — query and build knowledge graphs automatically"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
@@ -61,7 +61,7 @@ dev = [
     "pre-commit>=4.0.0",
     "bandit>=1.8.0",
 ]
-full = ["gibsgraph[gnn,ui,dev]"]
+full = ["gibsgraph[mistral,gnn,ui,dev]"]
 
 [project.urls]
 Homepage = "https://github.com/gibbrdev/gibsgraph"
