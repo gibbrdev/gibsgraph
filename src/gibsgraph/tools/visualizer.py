@@ -28,7 +28,7 @@ class GraphVisualizer:
         seen_nodes: set[str] = set()
 
         for node in nodes:
-            node_id = str(node.get("id", node.get("name", "unknown")))
+            node_id = str(node.get("_id", node.get("id", node.get("name", "unknown"))))
             safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", node_id)
             label = str(node.get("name", node_id))[:30].replace('"', "'")
             lines.append(f'    {safe_id}["{label}"]')
@@ -45,7 +45,11 @@ class GraphVisualizer:
 
     def bloom_url(self, subgraph: dict[str, Any]) -> str:
         """Generate a Neo4j Bloom deep-link URL for the subgraph."""
-        node_ids = [str(n.get("id", "")) for n in subgraph.get("nodes", []) if n.get("id")]
+        node_ids = [
+            str(n.get("_id", n.get("id", "")))
+            for n in subgraph.get("nodes", [])
+            if n.get("_id") or n.get("id")
+        ]
         if not node_ids:
             return ""
 

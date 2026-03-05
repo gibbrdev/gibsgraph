@@ -407,9 +407,9 @@ class TestBundledExpertStore:
         result = store.search("apoc path expand")
         assert len(result.hits) > 0
 
-    def test_search_industry_pattern(self):
+    def test_search_modeling_pattern(self):
         store = BundledExpertStore()
-        result = store.search("fraud detection transaction account")
+        result = store.search("graph data modeling relational")
         assert len(result.hits) > 0
         assert any(h.label == "ModelingPattern" for h in result.hits)
 

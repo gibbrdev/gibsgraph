@@ -554,8 +554,9 @@ class GraphRetriever:
         # Tabular records (from Cypher path)
         records = subgraph.get("records", [])
         if records:
+            max_records = 25
             lines.append(f"Query results ({len(records)} rows):")
-            for row in records[:25]:
+            for row in records[:max_records]:
                 parts: list[str] = []
                 for k, v in row.items():
                     if isinstance(v, dict) and "_labels" in v:
@@ -567,19 +568,27 @@ class GraphRetriever:
                     else:
                         parts.append(f"{k}={v}")
                 lines.append(f"  {', '.join(parts)}")
+            if len(records) > max_records:
+                lines.append(f"  [truncated — showing {max_records} of {len(records)} rows]")
             return "\n".join(lines)
 
         # Node/edge subgraph (from vector path)
         nodes = subgraph.get("nodes", [])
         edges = subgraph.get("edges", [])
+        max_nodes = 20
+        max_edges = 30
         if nodes:
             lines.append(f"Nodes ({len(nodes)}):")
-            for n in nodes[:20]:
+            for n in nodes[:max_nodes]:
                 lines.append(f"  - {n}")
+            if len(nodes) > max_nodes:
+                lines.append(f"  [truncated — showing {max_nodes} of {len(nodes)} nodes]")
         if edges:
             lines.append(f"Relationships ({len(edges)}):")
-            for e in edges[:30]:
+            for e in edges[:max_edges]:
                 lines.append(f"  - ({e['start']})-[:{e['type']}]->({e['end']})")
+            if len(edges) > max_edges:
+                lines.append(f"  [truncated — showing {max_edges} of {len(edges)} relationships]")
         return "\n".join(lines) if lines else "No results found."
 
     def _pcst_prune(

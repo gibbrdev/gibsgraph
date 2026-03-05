@@ -33,9 +33,8 @@ PENDING.md
 data/raw/
 data/processed/
 
-# Internal specs and design docs (not for public repo)
-docs/specs/
-docs/GIBSGRAPH_EXPLAINED.md
+# Internal docs (personal notes, specs, design docs)
+docs/
 
 # Testing / coverage
 .coverage

@@ -1,10 +1,12 @@
 """Expert data quality audit — offline JSONL verification.
 
-Reads all 5 bundled JSONL files and runs 4 tiers of automated checks:
+Reads all 5 bundled JSONL files and runs 6 tiers of automated checks:
   Tier 1: Completeness (required fields, valid enums)
   Tier 2: Cypher validation (syntax, balance, pseudocode detection)
   Tier 3: Cross-reference (functions/clauses vs Neo4j 5.x official)
   Tier 4: Duplicates & consistency (exact dupes, naming conventions)
+  Tier 5: Deprecated syntax (id(), exists(), old index syntax)
+  Tier 6: Markup artifacts (AsciiDoc remnants in text fields)
 
 Usage:
   python data/scripts/audit_expert_data.py              # terminal report
@@ -94,7 +96,7 @@ NEO4J_5X_FUNCTIONS: frozenset[str] = frozenset({
     "avg", "collect", "count", "max", "min",
     "percentileCont", "percentileDisc", "stDev", "stDevP", "sum",
     # Predicate
-    "all", "any", "exists", "isEmpty", "none", "single",
+    "all", "allReduce", "any", "exists", "isEmpty", "none", "single",
     # Scalar
     "char_length", "character_length", "coalesce", "elementId", "endNode",
     "head", "id", "last", "length", "nullIf", "properties", "randomUUID",
@@ -133,6 +135,8 @@ NEO4J_5X_FUNCTIONS: frozenset[str] = frozenset({
     "time.truncate",
     # Spatial
     "point", "point.distance", "point.withinBBox",
+    # Format (Cypher 25)
+    "format",
     # Vector (5.13+)
     "vector", "vector.similarity.cosine", "vector.similarity.euclidean",
     "vector_dimension_count", "vector_distance", "vector_norm",
@@ -175,8 +179,14 @@ NEO4J_5X_CLAUSE_NAMES: frozenset[str] = frozenset({
     "CALL subqueries",
     # Expression keywords (used as clause-level entries in our data)
     "DISTINCT", "WHEN", "THEN", "ELSE", "SHOW",
-    # Newer additions
-    "FILTER", "LET", "SEARCH", "OFFSET",
+})
+
+# Cypher 25 only (Neo4j 2025.06+) — valid but NOT Neo4j 5.x
+CYPHER_25_ONLY_CLAUSES: frozenset[str] = frozenset({
+    "FILTER",   # New clause in Cypher 25 (NOT the old removed FILTER expression)
+    "LET",      # Cypher 25 variable binding clause
+    "OFFSET",   # Cypher 25 synonym for SKIP
+    "SEARCH",   # Cypher 25 vector search sub-clause
 })
 
 # Known non-functions (parser artifacts in the dataset)
@@ -266,6 +276,16 @@ def check_completeness(
                         severity="fail", record_id=rec_id,
                     ))
 
+            # Empty cypher_examples (patterns/practices less useful without them)
+            if filename in ("modeling_patterns.jsonl", "best_practices.jsonl"):
+                cx = obj.get("cypher_examples")
+                if isinstance(cx, list) and len(cx) == 0:
+                    result.issues.append(Issue(
+                        file=filename, line_num=line_num, field="cypher_examples",
+                        message="No Cypher examples — record less useful for training",
+                        severity="warn", record_id=rec_id,
+                    ))
+
             # quality_tier
             qt = obj.get("quality_tier")
             if qt is not None and qt not in VALID_QUALITY_TIERS:
@@ -353,6 +373,7 @@ def _check_balanced(cypher: str) -> list[str]:
     errors: list[str] = []
     stack: list[str] = []
     in_string = False
+    in_backtick = False
     escape = False
     quote_char = ""
 
@@ -363,9 +384,16 @@ def _check_balanced(cypher: str) -> list[str]:
         if ch == "\\":
             escape = True
             continue
+        if in_backtick:
+            if ch == "`":
+                in_backtick = False
+            continue
         if in_string:
             if ch == quote_char:
                 in_string = False
+            continue
+        if ch == "`":
+            in_backtick = True
             continue
         if ch in ("'", '"'):
             in_string = True
@@ -499,7 +527,14 @@ def check_cross_reference(
         name = str(obj.get("name", ""))
         rec_id = name
 
-        if name not in NEO4J_5X_CLAUSE_NAMES:
+        if name in CYPHER_25_ONLY_CLAUSES:
+            result.issues.append(Issue(
+                file="cypher_clauses.jsonl", line_num=line_num, field="name",
+                message=f"Cypher 25 only (not in Neo4j 5.x): {name!r}",
+                severity="warn", record_id=rec_id,
+            ))
+            result.warned += 1
+        elif name not in NEO4J_5X_CLAUSE_NAMES:
             result.issues.append(Issue(
                 file="cypher_clauses.jsonl", line_num=line_num, field="name",
                 message=f"Unrecognized clause: {name!r}",
@@ -521,8 +556,8 @@ def _normalize_cypher(cypher: str) -> str:
 
 
 def _is_pascal_case(s: str) -> bool:
-    """PascalCase: starts uppercase, has lowercase, no underscores."""
-    return bool(re.match(r"^[A-Z][a-zA-Z0-9]+$", s))
+    """PascalCase: starts uppercase, contains at least one lowercase letter."""
+    return bool(re.match(r"^[A-Z][a-zA-Z0-9]*$", s)) and any(c.islower() for c in s)
 
 
 def _is_upper_snake(s: str) -> bool:
@@ -624,6 +659,148 @@ def check_duplicates_and_consistency(
     return result
 
 
+# ── Tier 5: Deprecated syntax ────────────────────────────────────────────────
+
+# Deprecated patterns to detect in Cypher snippets
+# Each: (regex, message, severity)
+_DEPRECATED_PATTERNS: list[tuple[re.Pattern[str], str, Severity]] = [
+    (
+        re.compile(r"\bid\s*\(", re.IGNORECASE),
+        "Deprecated: id() — use elementId() instead (deprecated in 5.x)",
+        "warn",
+    ),
+    (
+        re.compile(r"\bexists\s*\(\s*\w+\.\w+\s*\)"),
+        "Removed in 5.0: exists(n.prop) — use n.prop IS NOT NULL",
+        "fail",
+    ),
+    (
+        re.compile(r"CREATE\s+INDEX\s+ON\s*:", re.IGNORECASE),
+        "Removed in 5.0: CREATE INDEX ON :Label(prop) — use CREATE INDEX FOR",
+        "fail",
+    ),
+    (
+        re.compile(r"DROP\s+INDEX\s+ON\s*:", re.IGNORECASE),
+        "Removed in 5.0: DROP INDEX ON :Label(prop) — use DROP INDEX name",
+        "fail",
+    ),
+    (
+        re.compile(
+            r"CREATE\s+CONSTRAINT\s+ON\s.*\bASSERT\b", re.IGNORECASE,
+        ),
+        "Removed in 5.0: CREATE CONSTRAINT ON ... ASSERT — use FOR ... REQUIRE",
+        "fail",
+    ),
+    (
+        re.compile(r"\btoInt\s*\(", re.IGNORECASE),
+        "Deprecated: toInt() — use toInteger()",
+        "warn",
+    ),
+    (
+        re.compile(r"\brels\s*\(", re.IGNORECASE),
+        "Deprecated: rels() — use relationships()",
+        "warn",
+    ),
+    (
+        re.compile(r"\|-\[:\w+\|:\w+"),
+        "Deprecated in 5.0: |:TYPE syntax — use |TYPE (drop the colon)",
+        "warn",
+    ),
+]
+
+
+def check_deprecated_syntax(
+    all_records: dict[str, list[tuple[int, dict[str, object]]]],
+) -> AuditResult:
+    """Tier 5: Scan Cypher snippets for deprecated Neo4j 5.x patterns."""
+    result = AuditResult(
+        tier="DEPRECATED SYNTAX",
+        description="Deprecated/removed Neo4j 5.x patterns in Cypher",
+    )
+    snippets = extract_all_cypher(all_records)
+    result.total_checked = len(snippets)
+
+    for cypher, filename, line_num, rec_id in snippets:
+        issues_before = len(result.issues)
+
+        for pattern, message, severity in _DEPRECATED_PATTERNS:
+            if pattern.search(cypher):
+                result.issues.append(Issue(
+                    file=filename, line_num=line_num, field="cypher",
+                    message=message,
+                    severity=severity, record_id=rec_id,
+                ))
+
+        if len(result.issues) == issues_before:
+            result.passed += 1
+        else:
+            new_issues = result.issues[issues_before:]
+            if any(i.severity == "fail" for i in new_issues):
+                result.failed += 1
+            else:
+                result.warned += 1
+
+    return result
+
+
+# ── Tier 6: Markup artifacts ────────────────────────────────────────────────
+
+_ASCIIDOC_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"xref:[^\s]+\["), "AsciiDoc xref: cross-reference"),
+    (re.compile(r"image::[^\s]+\["), "AsciiDoc image:: macro"),
+    (re.compile(r"ifdef::|ifndef::"), "AsciiDoc conditional directive"),
+    (re.compile(r"include::[^\s]+\["), "AsciiDoc include:: directive"),
+    (re.compile(r"\[source,[a-z]+\]"), "AsciiDoc [source,...] code marker"),
+    (re.compile(r"^----$", re.MULTILINE), "AsciiDoc ---- delimiter"),
+    (re.compile(r"^--$", re.MULTILINE), "AsciiDoc -- delimiter"),
+    (re.compile(r"link:[^\s]+\["), "AsciiDoc link: macro"),
+    (re.compile(r"<<[a-z_]+>>"), "AsciiDoc <<anchor>> reference"),
+]
+
+# Fields that contain prose (not Cypher) — check these for markup
+_TEXT_FIELDS = [
+    "description", "when_to_use", "anti_pattern", "context",
+]
+
+
+def check_markup_artifacts(
+    all_records: dict[str, list[tuple[int, dict[str, object]]]],
+) -> AuditResult:
+    """Tier 6: Detect AsciiDoc markup remnants in text fields."""
+    result = AuditResult(
+        tier="MARKUP ARTIFACTS",
+        description="AsciiDoc remnants in text fields",
+    )
+
+    for filename, records in all_records.items():
+        for line_num, obj in records:
+            rec_id = _record_id(filename, obj)
+
+            for fld in _TEXT_FIELDS:
+                val = obj.get(fld)
+                if not isinstance(val, str) or not val.strip():
+                    continue
+
+                result.total_checked += 1
+                issues_before = len(result.issues)
+
+                for pattern, desc in _ASCIIDOC_PATTERNS:
+                    if pattern.search(val):
+                        result.issues.append(Issue(
+                            file=filename, line_num=line_num, field=fld,
+                            message=f"{desc} found in {fld}",
+                            severity="warn", record_id=rec_id,
+                        ))
+                        break  # One warning per field is enough
+
+                if len(result.issues) == issues_before:
+                    result.passed += 1
+                else:
+                    result.warned += 1
+
+    return result
+
+
 # ── Report rendering ─────────────────────────────────────────────────────────
 
 
@@ -662,6 +839,7 @@ def _issues_table(issues: list[Issue], limit: int) -> Table:
 def render_report(
     console: Console,
     results: list[AuditResult],
+    all_records: dict[str, list[tuple[int, dict[str, object]]]],
     total_records: int,
     total_cypher: int,
     verbose: bool,
@@ -707,11 +885,36 @@ def render_report(
             console.print(f"\n  [yellow]Warnings ({len(warn_issues)}):[/]")
             console.print(_issues_table(warn_issues, limit))
 
-    # Human review reminder
+    # Human review reminder (computed from actual data)
+    n_patterns = len(all_records.get("modeling_patterns.jsonl", []))
+    n_practices = len(all_records.get("best_practices.jsonl", []))
+    n_human_review = n_patterns + n_practices
+
     console.print("\n[bold]HUMAN REVIEW NEEDED[/bold]")
-    console.print("  23 modeling patterns — cannot auto-verify advice quality")
-    console.print("  318 best practices — cannot auto-verify advice quality")
+    console.print(f"  {n_patterns} modeling patterns — cannot auto-verify advice quality")
+    console.print(f"  {n_practices} best practices — cannot auto-verify advice quality")
     console.print("  [dim]These records need review by a Neo4j practitioner[/]")
+
+    # Quality tier distribution
+    console.print("\n[bold]QUALITY TIER DISTRIBUTION[/bold]")
+    for filename, records in all_records.items():
+        tiers: dict[str, int] = {}
+        for _, obj in records:
+            qt = str(obj.get("quality_tier", "MISSING"))
+            tiers[qt] = tiers.get(qt, 0) + 1
+        parts = [f"{k}: {v}" for k, v in sorted(tiers.items())]
+        console.print(f"  {filename}: {', '.join(parts)}")
+
+    # Empty cypher_examples report
+    console.print("\n[bold]EMPTY CYPHER EXAMPLES[/bold]")
+    for filename in ("modeling_patterns.jsonl", "best_practices.jsonl"):
+        records = all_records.get(filename, [])
+        empty = sum(1 for _, obj in records if not obj.get("cypher_examples"))
+        if empty:
+            console.print(
+                f"  [yellow]{filename}: {empty}/{len(records)} records "
+                f"have no Cypher examples[/]",
+            )
 
     # Summary
     console.print()
@@ -719,7 +922,7 @@ def render_report(
         f"[bold]SUMMARY[/bold]\n"
         f"[green]Verified:     {total_verified}[/]\n"
         f"[red]Flagged:      {total_flagged}[/]\n"
-        f"Human review: 341 (patterns + practices)",
+        f"Human review: {n_human_review} (patterns + practices)",
         style="bold",
     ))
 
@@ -729,11 +932,17 @@ def render_report(
 
 def export_json(
     results: list[AuditResult],
+    all_records: dict[str, list[tuple[int, dict[str, object]]]],
     total_records: int,
     total_cypher: int,
     output_path: Path,
 ) -> None:
     """Write machine-readable JSON audit report."""
+    n_human_review = (
+        len(all_records.get("modeling_patterns.jsonl", []))
+        + len(all_records.get("best_practices.jsonl", []))
+    )
+
     data: dict[str, object] = {
         "date": datetime.now(tz=UTC).isoformat(),
         "records_scanned": total_records,
@@ -771,7 +980,7 @@ def export_json(
     data["summary"] = {
         "verified": total_verified,
         "flagged": total_flagged,
-        "human_review": 341,
+        "human_review": n_human_review,
     }
 
     output_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -823,12 +1032,18 @@ def main() -> None:
     console.print("[dim]Running Tier 4: Duplicates & consistency...[/]")
     results.append(check_duplicates_and_consistency(all_records))
 
+    console.print("[dim]Running Tier 5: Deprecated syntax...[/]")
+    results.append(check_deprecated_syntax(all_records))
+
+    console.print("[dim]Running Tier 6: Markup artifacts...[/]")
+    results.append(check_markup_artifacts(all_records))
+
     # Report
-    render_report(console, results, total_records, total_cypher, args.verbose)
+    render_report(console, results, all_records, total_records, total_cypher, args.verbose)
 
     # JSON export
     if args.json_path is not None:
-        export_json(results, total_records, total_cypher, args.json_path)
+        export_json(results, all_records, total_records, total_cypher, args.json_path)
         console.print(f"\n[dim]JSON report written to {args.json_path}[/]")
 
     # Exit code: 1 if any failures
