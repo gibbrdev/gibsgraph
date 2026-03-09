@@ -32,6 +32,7 @@ PENDING.md
 # Expert graph data (large, derived — regenerate with data/scripts/)
 data/raw/
 data/processed/
+data/training/
 
 # Internal docs (personal notes, specs, design docs)
 docs/
