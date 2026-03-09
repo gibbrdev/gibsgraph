@@ -1,9 +1,9 @@
 """GibsGraph — GraphRAG + LangGraph agent for Neo4j knowledge graph reasoning."""
 
-from gibsgraph._graph import Answer, Graph, IngestResult
+from gibsgraph._graph import Answer, Graph, IngestResult, SchemaInfo
 
-__version__ = "0.3.5"
-__all__ = ["Answer", "Graph", "IngestResult"]
+__version__ = "0.3.6"
+__all__ = ["Answer", "Graph", "IngestResult", "SchemaInfo"]
 
 # Power-user imports — available but not in the spotlight:
 # from gibsgraph.agent import GibsGraphAgent

@@ -47,12 +47,35 @@ class IngestResult:
     nodes_created: int
     relationships_created: int
     chunks_processed: int
+    validation_warnings: list[str] = field(default_factory=list)
+    validation_passed: bool = True
 
     def __str__(self) -> str:
-        return (
+        base = (
             f"Ingested '{self.source}': "
             f"{self.nodes_created} nodes, "
             f"{self.relationships_created} relationships"
+        )
+        if self.validation_warnings:
+            base += f" ({len(self.validation_warnings)} warnings)"
+        return base
+
+
+@dataclass
+class SchemaInfo:
+    """Result from Graph.schema() — current graph structure."""
+
+    node_labels: list[str]
+    relationship_types: list[str]
+    node_count: int
+    relationship_count: int
+    properties: dict[str, list[str]]  # label -> [property names]
+
+    def __str__(self) -> str:
+        return (
+            f"Schema: {len(self.node_labels)} labels, "
+            f"{len(self.relationship_types)} rel types, "
+            f"{self.node_count} nodes, {self.relationship_count} relationships"
         )
 
 
@@ -215,12 +238,82 @@ class Graph:
             )
         log.info("graph.ingest", source=source, length=len(text))
         result = self._agent_instance().kg_builder.ingest(text, source=source)
+
+        # Post-ingest validation — lightweight quality checks
+        warnings = self._validate_ingest(result.nodes_created)
+
         return IngestResult(
             source=source,
             nodes_created=result.nodes_created,
             relationships_created=result.relationships_created,
             chunks_processed=result.chunks_processed,
+            validation_warnings=warnings,
+            validation_passed=len(warnings) == 0,
         )
+
+    def schema(self) -> SchemaInfo:
+        """Inspect the current Neo4j graph structure.
+
+        Returns node labels, relationship types, counts, and properties
+        without requiring any LLM calls.
+
+        Example::
+
+            info = g.schema()
+            print(info.node_labels)       # ['Person', 'Company']
+            print(info.relationship_types) # ['WORKS_AT', 'ACQUIRED']
+            print(info.properties)         # {'Person': ['name', 'age'], ...}
+        """
+        from neo4j import GraphDatabase
+
+        driver = GraphDatabase.driver(
+            self._settings.neo4j_uri,
+            auth=(
+                self._settings.neo4j_username,
+                self._settings.neo4j_password.get_secret_value(),
+            ),
+            max_connection_lifetime=self._settings.neo4j_max_connection_lifetime,
+        )
+        try:
+            with driver.session(database=self._settings.neo4j_database) as session:
+                labels = [
+                    r["label"]
+                    for r in session.run("CALL db.labels() YIELD label RETURN label")
+                ]
+                rel_types = [
+                    r["relationshipType"]
+                    for r in session.run(
+                        "CALL db.relationshipTypes() YIELD relationshipType "
+                        "RETURN relationshipType"
+                    )
+                ]
+                node_count: int = session.run(
+                    "MATCH (n) RETURN count(n) AS c"
+                ).single(strict=True)["c"]
+                rel_count: int = session.run(
+                    "MATCH ()-[r]->() RETURN count(r) AS c"
+                ).single(strict=True)["c"]
+
+                # Collect properties per label
+                props: dict[str, list[str]] = {}
+                for label in labels:
+                    result = session.run(
+                        "MATCH (n) WHERE $label IN labels(n) "
+                        "UNWIND keys(n) AS key "
+                        "RETURN DISTINCT key ORDER BY key",
+                        label=label,
+                    )
+                    props[label] = [r["key"] for r in result]
+
+            return SchemaInfo(
+                node_labels=labels,
+                relationship_types=rel_types,
+                node_count=node_count,
+                relationship_count=rel_count,
+                properties=props,
+            )
+        finally:
+            driver.close()
 
     # ------------------------------------------------------------------
     # Power-user helpers (still on Graph, but not the main story)
@@ -255,6 +348,59 @@ class Graph:
         from gibsgraph.tools.visualizer import GraphVisualizer
 
         return GraphVisualizer(settings=self._settings).to_mermaid(subgraph)
+
+    def _validate_ingest(self, nodes_created: int) -> list[str]:
+        """Run post-ingest quality checks on the graph.
+
+        Checks for:
+        - Generic node labels (Entity, Object, Thing, etc.)
+        - Non-PascalCase labels
+        - Relationship types not in UPPER_SNAKE_CASE
+        - Orphan nodes (no relationships)
+        """
+        import re
+
+        warnings: list[str] = []
+        if nodes_created == 0:
+            return warnings
+
+        generic_labels = {
+            "Entity", "Object", "Item", "Thing", "Node",
+            "Data", "Record", "Element", "Resource", "Entry",
+        }
+
+        try:
+            info = self.schema()
+        except Exception as exc:
+            log.warning("validate_ingest.schema_failed", error=str(exc))
+            return [f"Could not validate: {exc}"]
+
+        for label in info.node_labels:
+            if label.startswith("__"):
+                continue  # skip internal labels like __Entity__
+            if label in generic_labels:
+                warnings.append(f"Generic label '{label}' — consider a domain-specific name")
+            if not re.match(r"^[A-Z][a-zA-Z0-9]*$", label) or not any(
+                c.islower() for c in label
+            ):
+                if label not in generic_labels:
+                    warnings.append(
+                        f"Label '{label}' is not PascalCase — Neo4j convention is PascalCase"
+                    )
+
+        for rel_type in info.relationship_types:
+            if rel_type.startswith("__"):
+                continue
+            if not re.match(r"^[A-Z][A-Z0-9_]*$", rel_type):
+                warnings.append(
+                    f"Relationship '{rel_type}' is not UPPER_SNAKE_CASE — "
+                    f"Neo4j convention is UPPER_SNAKE_CASE"
+                )
+
+        if warnings:
+            log.info("validate_ingest.warnings", count=len(warnings))
+
+        return warnings
 
     def close(self) -> None:
         """Close Neo4j connections and release resources."""

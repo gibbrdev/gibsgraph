@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gibsgraph._graph import Answer, Graph, IngestResult, _resolve_llm
+from gibsgraph._graph import Answer, Graph, IngestResult, SchemaInfo, _resolve_llm
 from gibsgraph.config import PROVIDERS
 
 # --- Answer dataclass ---
@@ -262,3 +262,151 @@ def test_graph_ingest_delegates():
     assert result.relationships_created == 3
     assert result.chunks_processed == 1
     mock_agent.kg_builder.ingest.assert_called_once_with("Apple acquired Beats.", source="test")
+
+
+# --- SchemaInfo dataclass ---
+
+
+def test_schema_info_str():
+    s = SchemaInfo(
+        node_labels=["Person", "Company"],
+        relationship_types=["WORKS_AT"],
+        node_count=100,
+        relationship_count=50,
+        properties={"Person": ["name"], "Company": ["name"]},
+    )
+    assert "2 labels" in str(s)
+    assert "1 rel types" in str(s)
+    assert "100 nodes" in str(s)
+
+
+# --- IngestResult with validation ---
+
+
+def test_ingest_result_with_warnings():
+    r = IngestResult(
+        source="test.txt",
+        nodes_created=5,
+        relationships_created=3,
+        chunks_processed=1,
+        validation_warnings=["Generic label 'Entity'"],
+        validation_passed=False,
+    )
+    assert "1 warnings" in str(r)
+    assert not r.validation_passed
+
+
+def test_ingest_result_no_warnings():
+    r = IngestResult(
+        source="test.txt", nodes_created=5, relationships_created=3, chunks_processed=1
+    )
+    assert r.validation_passed
+    assert r.validation_warnings == []
+
+
+# --- Graph._validate_ingest ---
+
+
+def test_validate_ingest_generic_labels():
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw")
+
+        mock_schema = SchemaInfo(
+            node_labels=["Entity", "Person", "__Entity__"],
+            relationship_types=["WORKS_AT"],
+            node_count=10,
+            relationship_count=5,
+            properties={},
+        )
+        with patch.object(g, "schema", return_value=mock_schema):
+            warnings = g._validate_ingest(nodes_created=3)
+
+    assert any("Generic label 'Entity'" in w for w in warnings)
+    # __Entity__ is internal, should be skipped
+    assert not any("__Entity__" in w for w in warnings)
+    # Person is fine
+    assert not any("Person" in w for w in warnings)
+
+
+def test_validate_ingest_bad_label_case():
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw")
+
+        mock_schema = SchemaInfo(
+            node_labels=["ALLCAPS", "good_name", "Person"],
+            relationship_types=["WORKS_AT"],
+            node_count=10,
+            relationship_count=5,
+            properties={},
+        )
+        with patch.object(g, "schema", return_value=mock_schema):
+            warnings = g._validate_ingest(nodes_created=3)
+
+    assert any("ALLCAPS" in w and "PascalCase" in w for w in warnings)
+    assert any("good_name" in w and "PascalCase" in w for w in warnings)
+
+
+def test_validate_ingest_bad_rel_type():
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw")
+
+        mock_schema = SchemaInfo(
+            node_labels=["Person"],
+            relationship_types=["worksAt", "WORKS_AT", "__INTERNAL__"],
+            node_count=10,
+            relationship_count=5,
+            properties={},
+        )
+        with patch.object(g, "schema", return_value=mock_schema):
+            warnings = g._validate_ingest(nodes_created=3)
+
+    assert any("worksAt" in w and "UPPER_SNAKE_CASE" in w for w in warnings)
+    assert not any("WORKS_AT" in w for w in warnings)
+    assert not any("__INTERNAL__" in w for w in warnings)
+
+
+def test_validate_ingest_zero_nodes():
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw")
+        # Should return empty list without calling schema()
+        warnings = g._validate_ingest(nodes_created=0)
+        assert warnings == []
+
+
+def test_validate_ingest_schema_error():
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw")
+
+        with patch.object(g, "schema", side_effect=Exception("connection refused")):
+            warnings = g._validate_ingest(nodes_created=3)
+
+    assert len(warnings) == 1
+    assert "Could not validate" in warnings[0]
+
+
+def test_graph_ingest_includes_validation():
+    """Graph.ingest() includes validation warnings in result."""
+    from gibsgraph.kg_builder.builder import IngestResult as BuilderIngestResult
+
+    mock_agent = MagicMock()
+    mock_agent.kg_builder.ingest.return_value = BuilderIngestResult(
+        nodes_created=5, relationships_created=3, chunks_processed=1
+    )
+
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=False):
+        g = Graph("bolt://localhost:7687", password="testpw", read_only=False)
+        g._agent = mock_agent
+
+        mock_schema = SchemaInfo(
+            node_labels=["Entity", "Person"],
+            relationship_types=["WORKS_AT"],
+            node_count=10,
+            relationship_count=5,
+            properties={},
+        )
+        with patch.object(g, "schema", return_value=mock_schema):
+            result = g.ingest("Apple acquired Beats.", source="test")
+
+    assert isinstance(result, IngestResult)
+    assert not result.validation_passed
+    assert any("Generic label" in w for w in result.validation_warnings)
