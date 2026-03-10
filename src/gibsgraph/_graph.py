@@ -277,22 +277,20 @@ class Graph:
         try:
             with driver.session(database=self._settings.neo4j_database) as session:
                 labels = [
-                    r["label"]
-                    for r in session.run("CALL db.labels() YIELD label RETURN label")
+                    r["label"] for r in session.run("CALL db.labels() YIELD label RETURN label")
                 ]
                 rel_types = [
                     r["relationshipType"]
                     for r in session.run(
-                        "CALL db.relationshipTypes() YIELD relationshipType "
-                        "RETURN relationshipType"
+                        "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType"
                     )
                 ]
-                node_count: int = session.run(
-                    "MATCH (n) RETURN count(n) AS c"
-                ).single(strict=True)["c"]
-                rel_count: int = session.run(
-                    "MATCH ()-[r]->() RETURN count(r) AS c"
-                ).single(strict=True)["c"]
+                node_count: int = session.run("MATCH (n) RETURN count(n) AS c").single(strict=True)[
+                    "c"
+                ]
+                rel_count: int = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single(
+                    strict=True
+                )["c"]
 
                 # Collect properties per label
                 props: dict[str, list[str]] = {}
@@ -365,8 +363,16 @@ class Graph:
             return warnings
 
         generic_labels = {
-            "Entity", "Object", "Item", "Thing", "Node",
-            "Data", "Record", "Element", "Resource", "Entry",
+            "Entity",
+            "Object",
+            "Item",
+            "Thing",
+            "Node",
+            "Data",
+            "Record",
+            "Element",
+            "Resource",
+            "Entry",
         }
 
         try:
@@ -380,9 +386,7 @@ class Graph:
                 continue  # skip internal labels like __Entity__
             if label in generic_labels:
                 warnings.append(f"Generic label '{label}' — consider a domain-specific name")
-            if not re.match(r"^[A-Z][a-zA-Z0-9]*$", label) or not any(
-                c.islower() for c in label
-            ):
+            if not re.match(r"^[A-Z][a-zA-Z0-9]*$", label) or not any(c.islower() for c in label):
                 if label not in generic_labels:
                     warnings.append(
                         f"Label '{label}' is not PascalCase — Neo4j convention is PascalCase"
