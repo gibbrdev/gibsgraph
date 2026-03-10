@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-09
+
+### Added
+- **Intent classifier node** — LLM-powered `IntentClassification` (Pydantic structured output) extracts action, industry, region, regulations, data_type, goal from free-form NL input; produces `enriched_query` for downstream retrieval
+- **`g.schema()` method** — returns `SchemaInfo` dataclass with node labels, relationship types, counts, and properties per label via parameterized Cypher
+- **Post-ingest validation** — `_validate_ingest()` checks Neo4j conventions after `g.ingest()`: generic label detection, PascalCase labels, UPPER_SNAKE_CASE relationships; results in `IngestResult.validation_warnings` and `.validation_passed`
+- **EUR-Lex training pipeline** — `build_training_pairs.py` converts Vestio's human-parsed compliance data into supervised (input_text, expected_graph) JSONL pairs with typed/weighted edges
+- **Vestio graph evaluator** — `eval_vestio_graph.py` audits Vestio's compliance graph against GibsGraph expert dataset (8 check categories, 44 passed, 0 failures)
+- 31 grounded cypher_examples (indexes, constraints, subqueries, vector search) + 4 best_practices added to expert dataset
+
+### Changed
+- LangGraph pipeline: `START → classify → retrieve → explain → validate → visualize → END` (was `START → retrieve → ...`)
+- `generate_explanation` prompt now includes industry/region/regulations/goal context from intent
+- `retrieve_subgraph` uses `enriched_query` when available (falls back to raw query)
+- Expert data audit upgraded to 6-tier verification: completeness, Cypher validation, cross-ref, duplicates, deprecated syntax, markup artifacts
+- Rule-based `quality_tier` assigned to all 638 records that were missing it
+- Expert dataset: 991 total records, ~800 usable after low-tier filtering
+
+### Fixed
+- AsciiDoc markup artifacts stripped from expert data records
+- 13/23 modeling_patterns `node_labels` fixed (removed ALL_CAPS fragments)
+- PascalCase regex bug in audit script
+- Visualizer `_id` key error on vector-retrieved nodes
+- Retriever truncation edge case
+
+### Testing
+- 20 new tests: 11 for graph facade (SchemaInfo, validation), 9 for agent state (intent classification, enriched generation)
+- 281+ tests passing
+
 ## [0.3.5] - 2026-02-27
 
 ### Added
@@ -229,7 +258,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/` — usage examples (regulatory KG)
 - `.github/` — CI workflows, issue templates, dependabot
 
-[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/gibbrdev/gibsgraph/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.5...v0.4.0
 [0.3.5]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/gibbrdev/gibsgraph/compare/v0.3.2...v0.3.3
