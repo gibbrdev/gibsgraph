@@ -17,12 +17,16 @@ grounded answer with the Cypher shown so you can verify what was queried.
 
 ---
 
-## What it does (v0.3.5)
+## What it does (v0.4.0)
 
 - **Natural language queries** — ask anything about your Neo4j graph
+- **Intent classification** — LLM-powered NL understanding extracts industry, region, regulations, and goal from free-form input
 - **Text-to-graph ingestion** — `g.ingest("any text")` extracts entities and relationships into Neo4j automatically
-- **Expert knowledge graph** — 920 records: 36 clauses, 133 functions, 446 examples, 23 modeling patterns, 318 best practices
-- **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~849 records)
+- **Post-ingest validation** — checks generated graphs against Neo4j conventions (PascalCase labels, UPPER_SNAKE_CASE relationships, generic label detection)
+- **Schema introspection** — `g.schema()` returns node labels, relationship types, counts, and properties per label
+- **Expert knowledge graph** — 991 records: 36 clauses, 133 functions, 477 examples, 23 modeling patterns, 322 best practices
+- **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~800 records)
+- **Training data pipelines** — EUR-Lex (1,106 pairs), MITRE ATT&CK (2,351 pairs), NL-to-graph (43 curated pairs from 12 verified schemas)
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
 - **PCST subgraph pruning** — prunes vector neighbourhoods to the most query-relevant subset (opt-in, requires `gibsgraph[gnn]`)
@@ -35,7 +39,7 @@ grounded answer with the Cypher shown so you can verify what was queried.
 
 ### Planned (not yet implemented)
 
-- G-Retriever GNN reasoning
+- G-Retriever GNN reasoning (training data ready, model pending)
 
 ---
 
@@ -70,7 +74,7 @@ g.close()
 
 ## Expert knowledge graph
 
-GibsGraph ships with a curated knowledge graph of 920 Neo4j records (849 after
+GibsGraph ships with a curated knowledge graph of 991 Neo4j records (~800 after
 quality filtering): Cypher clauses, functions, query examples, modeling patterns,
 and best practices. This expertise is bundled as JSONL — no extra setup needed.
 
@@ -123,16 +127,17 @@ docker compose up
 ## Architecture
 
 ```
-User Query
+User Query (natural language, any quality)
     |
     v
 LangGraph Agent (agent.py)
+    +-- classify       <- Intent classification (industry, region, regulations, goal)
     +-- retrieval/     <- Auto schema discovery + text-to-Cypher + vector search + PCST pruning
     +-- tools/         <- Cypher validator, Mermaid visualizer
     +-- training/      <- 4-stage validation (syntactic/structural/semantic/domain)
     +-- expert.py      <- ExpertStore + BundledExpertStore (JSONL fallback)
     +-- data/          <- Bundled expert JSONL (clauses, functions, examples, patterns, practices)
-    +-- kg_builder/    <- Text to Neo4j via SimpleKGPipeline
+    +-- kg_builder/    <- Text to Neo4j via SimpleKGPipeline + post-ingest validation
     +-- gnn/           <- G-Retriever inference (planned)
     |
     v
@@ -151,7 +156,7 @@ Neo4j Knowledge Graph
 
 ## Testing
 
-281 unit tests, 80% coverage.
+299 tests, 80% coverage.
 
 ```bash
 pytest                          # All tests

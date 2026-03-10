@@ -14,11 +14,14 @@ It grows into a knowledge machine that gets smarter every time someone uses it.
 ## Shipped
 
 - `g.ask()` — natural language queries against any Neo4j graph
+- Intent classification — LLM-powered NL understanding (industry, region, regulations, goal) (v0.4.0)
+- `g.schema()` — schema introspection with node labels, rel types, counts, properties (v0.4.0)
+- Post-ingest validation — checks Neo4j conventions after `g.ingest()` (v0.4.0)
 - Auto schema discovery — connects and learns your graph structure
 - Dual retrieval — vector search with text-to-Cypher fallback
 - Cypher self-healing — failed queries auto-corrected by LLM
 - 4 LLM providers — OpenAI, Anthropic, Mistral, xAI/Grok (auto-detected)
-- Expert knowledge graph — 715 nodes (36 clauses, 122 functions, 383 examples, 309 best practices)
+- Expert knowledge graph — 991 records (36 clauses, 133 functions, 477 examples, 23 patterns, 322 practices)
 - 4-stage validation suite — syntactic → structural → semantic → domain
 - Enterprise severity levels (ERROR/WARNING/INFO) on validation findings
 - Source-cited answers with Cypher transparency
@@ -27,6 +30,7 @@ It grows into a knowledge machine that gets smarter every time someone uses it.
 - Streamlit demo UI + Docker one-command setup
 - `g.ingest()` — text-to-graph ingestion via neo4j-graphrag SimpleKGPipeline (v0.3.4)
 - PCST subgraph pruning — prunes vector neighbourhoods to query-relevant subset (v0.3.5)
+- Training data pipelines — EUR-Lex, MITRE ATT&CK, NL-to-graph (3,500 pairs across 9 industries) (v0.4.0)
 
 ---
 
@@ -35,7 +39,10 @@ It grows into a knowledge machine that gets smarter every time someone uses it.
 
 - ~~`g.ingest()` — text-to-graph ingestion via neo4j-graphrag SimpleKGPipeline~~ (v0.3.4)
 - ~~PCST subgraph pruning for precise, hallucination-free retrieval~~ (v0.3.5)
-- Use case generation per industry
+- ~~Intent classification + NL understanding~~ (v0.4.0)
+- ~~`g.schema()` + post-ingest validation~~ (v0.4.0)
+- ~~Training data: EUR-Lex + MITRE ATT&CK + NL-to-graph~~ (v0.4.0)
+- GNN training pipeline (`gnn/g_retriever.py:predict()`)
 - Demo runs against gibs.dev regulatory graph
 
 ---
@@ -53,7 +60,7 @@ It grows into a knowledge machine that gets smarter every time someone uses it.
 ## v2.5 — Trained specialist
 **Theme: Not a generalist. A Neo4j expert.**
 
-- Fine-tuned on 1,000+ validated graphs across 8 industries
+- Fine-tuned on 3,500+ validated graphs across 9 industries (training data ready)
 - GNN validation layer — structural pattern recognition
 - Industry coverage: fintech, compliance, supply chain, healthcare,
   cybersecurity, HR, e-commerce, media
