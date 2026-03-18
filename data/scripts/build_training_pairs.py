@@ -56,9 +56,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
-VESTIO_ROOT = Path("C:/Users/gibbe/EU/vestio")
+VESTIO_ROOT = Path(os.environ.get("VESTIO_ROOT", "vestio"))
 DEFAULT_OUTPUT = Path("data/training/eurlex_pairs.jsonl")
 
 # Edge weight scheme (from Vestio's migrate_to_neo4j.py)
@@ -245,11 +246,21 @@ def main() -> None:
         "--stats-only", action="store_true",
         help="Print statistics without writing output",
     )
+    parser.add_argument(
+        "--vestio-root", type=Path, default=VESTIO_ROOT,
+        help="Path to Vestio repository root (or set VESTIO_ROOT env var)",
+    )
     args = parser.parse_args()
 
     # Load Vestio data
-    chunks_path = VESTIO_ROOT / "data/parsed/chunks.json"
-    graph_path = VESTIO_ROOT / "data/parsed/cross_reference_graph.json"
+    vestio = args.vestio_root
+    chunks_path = vestio / "data/parsed/chunks.json"
+    graph_path = vestio / "data/parsed/cross_reference_graph.json"
+
+    if not chunks_path.exists():
+        print(f"ERROR: {chunks_path} not found.")
+        print(f"Set VESTIO_ROOT env var or pass --vestio-root /path/to/vestio")
+        raise SystemExit(1)
 
     print(f"Loading chunks from {chunks_path}...")
     with open(chunks_path, encoding="utf-8") as f:

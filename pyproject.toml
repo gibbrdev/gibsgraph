@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gibsgraph"
-version = "0.4.0"
+version = "0.4.1"
 description = "Natural language to Neo4j — query and build knowledge graphs automatically"
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-18
+
+### Added
+- **DORA training pipeline** — `build_dora_pairs.py` fetches Regulation (EU) 2022/2554 from EU Cellar XHTML, parses 64 articles + 277 paragraphs, generates 341 pairs with cross-regulation edges to GDPR, NIS2, MiFID II, Solvency II, PSD2, CRD/CRR
+- **NIS2 training pipeline** — `build_nis2_pairs.py` parses Directive (EU) 2022/2555, 250 pairs
+- **MiCA training pipeline** — `build_mica_pairs.py` parses Regulation (EU) 2023/1114 (149 articles), 913 pairs — largest single EU regulation
+- **GLEIF LEI training pipeline** — `build_gleif_pairs.py` fetches corporate ownership from GLEIF Golden Copy API (CC0), 2,196 pairs with 7 relationship types (DIRECT_PARENT, ULTIMATE_PARENT, IS_FUND_MANAGED_BY, etc.)
+- **Hetionet training pipeline** — `build_hetionet_pairs.py` fetches biomedical knowledge graph (CC0), 2,000 pairs across 11 node types and 24 edge types (drugs, diseases, genes, anatomy, side effects)
+- **Construction training pipeline** — `build_construction_pairs.py` generates pairs from BOT ontology, Brick Schema, IFC classes, and curated NL-to-graph examples for AEC domain
+- **Expert NL-to-graph pipeline** — `build_expert_nl_pairs.py` generates 128 high-quality pairs covering all 8 expert industry patterns (e-commerce, social, fraud, IT infra, supply chain, org hierarchy, healthcare, content), 4 structural patterns (hierarchical, temporal, workflow, multi-hop), plus query-answer and text-to-graph pairs
+- **Shared EUR-Lex fetcher** — `fetch_eurlex.py` uses EU Publications Office Cellar API to bypass EUR-Lex WAF, with XHTML caching
+
+### Changed
+- Training corpus rebalanced from 18,951 to 9,400 pairs — GLEIF capped at 2,196 (was 8,875), Hetionet capped at 2,000 (was 5,000) to prevent domain imbalance
+- GLEIF text enriched from 48 to 85 avg chars with relationship context descriptions
+- Training data now covers all 3 GNN objectives: g.ask() (query-answer pairs), g.ingest() (text-to-graph pairs), NL-to-graph (expert pattern pairs)
+- 186 unique node labels (was 128), 153 unique rel types (was 97)
+
+### Fixed
+- Removed hardcoded personal path (`C:/Users/gibbe/EU/vestio`) from `build_training_pairs.py` and `eval_vestio_graph.py` — now uses `VESTIO_ROOT` env var or `--vestio-root` CLI arg
+
 ## [0.4.0] - 2026-03-09
 
 ### Added

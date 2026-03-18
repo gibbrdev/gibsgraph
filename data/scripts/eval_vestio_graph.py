@@ -6,15 +6,30 @@ alignment with expert modeling patterns and best practices.
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import re
 from pathlib import Path
 
-VESTIO_ROOT = Path("C:/Users/gibbe/EU/vestio")
+VESTIO_ROOT = Path(os.environ.get("VESTIO_ROOT", "vestio"))
 EXPERT_DATA = Path("src/gibsgraph/data")
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Evaluate Vestio graph against GibsGraph expert dataset")
+    parser.add_argument(
+        "--vestio-root", type=Path, default=VESTIO_ROOT,
+        help="Path to Vestio repository root (or set VESTIO_ROOT env var)",
+    )
+    args = parser.parse_args()
+
+    vestio_root = args.vestio_root
+    if not (vestio_root / "src").exists():
+        print(f"ERROR: {vestio_root} does not look like a Vestio repo.")
+        print("Set VESTIO_ROOT env var or pass --vestio-root /path/to/vestio")
+        raise SystemExit(1)
+
     findings: list[tuple[str, str]] = []
     passes: list[str] = []
 
@@ -57,9 +72,9 @@ def main() -> None:
 
     # --- 3. CYPHER SECURITY ---
     print("\n--- 3. CYPHER SECURITY ---")
-    migrate_path = VESTIO_ROOT / "src/compliance/corpus/migrate_to_neo4j.py"
+    migrate_path = vestio_root / "src/compliance/corpus/migrate_to_neo4j.py"
     migrate_code = migrate_path.read_text(encoding="utf-8")
-    store_path = VESTIO_ROOT / "src/compliance/rag/graph_store.py"
+    store_path = vestio_root / "src/compliance/rag/graph_store.py"
     store_code = store_path.read_text(encoding="utf-8")
 
     param_count = migrate_code.count("$")
@@ -149,7 +164,7 @@ def main() -> None:
     # --- 6. DATA QUALITY ---
     print("\n--- 6. DATA QUALITY ---")
 
-    graph_path = VESTIO_ROOT / "data/parsed/cross_reference_graph.json"
+    graph_path = vestio_root / "data/parsed/cross_reference_graph.json"
     with open(graph_path, encoding="utf-8") as f:
         graph_data = json.load(f)
 

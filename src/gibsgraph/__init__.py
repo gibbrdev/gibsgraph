@@ -2,7 +2,7 @@
 
 from gibsgraph._graph import Answer, Graph, IngestResult, SchemaInfo
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __all__ = ["Answer", "Graph", "IngestResult", "SchemaInfo"]
 
 # Power-user imports — available but not in the spotlight:

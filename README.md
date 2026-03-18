@@ -17,7 +17,7 @@ grounded answer with the Cypher shown so you can verify what was queried.
 
 ---
 
-## What it does (v0.4.0)
+## What it does (v0.4.1)
 
 - **Natural language queries** — ask anything about your Neo4j graph
 - **Intent classification** — LLM-powered NL understanding extracts industry, region, regulations, and goal from free-form input
@@ -26,7 +26,7 @@ grounded answer with the Cypher shown so you can verify what was queried.
 - **Schema introspection** — `g.schema()` returns node labels, relationship types, counts, and properties per label
 - **Expert knowledge graph** — 991 records: 36 clauses, 133 functions, 477 examples, 23 modeling patterns, 322 best practices
 - **Bundled expert data** — works out of the box without loading data into Neo4j first (quality-filtered to ~800 records)
-- **Training data pipelines** — EUR-Lex (1,106 pairs), MITRE ATT&CK (2,351 pairs), NL-to-graph (43 curated pairs from 12 verified schemas)
+- **Training data pipelines** — 9,400 pairs across 7 domains: EUR-Lex (DORA, NIS2, MiCA, AI Act, GDPR), MITRE ATT&CK, GLEIF LEI, Hetionet, construction, expert NL-to-graph patterns
 - **4-stage validation** — syntactic → structural → semantic → domain, with enterprise severity levels
 - **Auto schema discovery** — connects and learns your graph structure automatically
 - **PCST subgraph pruning** — prunes vector neighbourhoods to the most query-relevant subset (opt-in, requires `gibsgraph[gnn]`)
